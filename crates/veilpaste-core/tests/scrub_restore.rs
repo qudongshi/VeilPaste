@@ -177,3 +177,28 @@ fn false_positive_fixtures_are_not_redacted_by_default() {
         );
     }
 }
+
+#[test]
+fn preserves_shell_quotes_when_scrubbing_curl_fixture() {
+    let input = fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/curl/request.curl"),
+    )
+    .expect("curl fixture should exist");
+
+    let result = scrub(&input, ScrubOptions::default()).expect("scrub should succeed");
+
+    assert!(result.output.contains("api_key=[URL_TOKEN_1]' \\"));
+    assert!(result.output.contains("-H 'Cookie: sessionid=[COOKIE_1]'"));
+}
+
+#[test]
+fn does_not_redact_trailing_url_delimiters() {
+    let input = "url='https://example.test/path?api_key=secret_query_value') next";
+
+    let result = scrub(input, ScrubOptions::default()).expect("scrub should succeed");
+
+    assert_eq!(
+        result.output,
+        "url='https://example.test/path?api_key=[URL_TOKEN_1]') next"
+    );
+}

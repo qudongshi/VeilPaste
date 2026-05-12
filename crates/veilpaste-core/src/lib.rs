@@ -62,19 +62,10 @@ pub struct MappingStore {
     pub entries: Vec<MappingEntry>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ScrubOptions {
     pub preview: bool,
     pub strict: bool,
-}
-
-impl Default for ScrubOptions {
-    fn default() -> Self {
-        Self {
-            preview: false,
-            strict: false,
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -323,7 +314,7 @@ fn detect_cookie_values(input: &str) -> Vec<Finding> {
                     let key = part[..eq_idx].trim();
                     let raw_value = &part[eq_idx + 1..];
                     let leading_ws = raw_value.len() - raw_value.trim_start().len();
-                    let trimmed = raw_value.trim();
+                    let trimmed = trim_secret_value(raw_value);
                     if should_redact_cookie_value(key, trimmed) {
                         let start = cookie_base + part_offset + eq_idx + 1 + leading_ws;
                         let end = start + trimmed.len();
@@ -399,9 +390,10 @@ fn is_sensitive_key(key: &str) -> bool {
 }
 
 fn detect_url_query_secrets(input: &str) -> Vec<Finding> {
-    let regex =
-        Regex::new(r"([?&])([A-Za-z0-9_-]*(?:token|key|secret|password)[A-Za-z0-9_-]*)=([^&\s]+)")
-            .unwrap();
+    let regex = Regex::new(
+        r#"([?&])([A-Za-z0-9_-]*(?:token|key|secret|password)[A-Za-z0-9_-]*)=([^&\s'"`)\]\}<>,]+)"#,
+    )
+    .unwrap();
     regex
         .captures_iter(input)
         .filter_map(|captures| {
@@ -415,6 +407,14 @@ fn detect_url_query_secrets(input: &str) -> Vec<Finding> {
             )
         })
         .collect()
+}
+
+fn trim_secret_value(value: &str) -> &str {
+    value.trim().trim_end_matches(is_secret_delimiter)
+}
+
+fn is_secret_delimiter(ch: char) -> bool {
+    matches!(ch, '\'' | '"' | '`' | ')' | ']' | '}' | '<' | '>' | ',')
 }
 
 fn detect_known_secrets(input: &str) -> Vec<Finding> {
