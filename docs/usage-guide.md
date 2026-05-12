@@ -1,6 +1,6 @@
-# SafePrompt Usage Guide
+# VeilPaste Usage Guide
 
-This guide shows how to install SafePrompt, run the common workflows, and explain it to early users.
+This guide shows how to install VeilPaste, run the common workflows, and explain it to early users.
 
 ## 1. Install Locally
 
@@ -13,19 +13,19 @@ scripts/install.sh
 Equivalent:
 
 ```bash
-cargo install --path crates/safeprompt-cli
+cargo install --path crates/veilpaste-cli
 ```
 
 Verify:
 
 ```bash
-safeprompt --version
+veilpaste --version
 ```
 
 Expected:
 
 ```txt
-safeprompt 0.1.0
+veilpaste 0.1.0
 ```
 
 ## 2. Fastest Usage
@@ -33,7 +33,7 @@ safeprompt 0.1.0
 Scrub text from stdin:
 
 ```bash
-printf 'Authorization: Bearer sk-live-abc1234567890\n' | safeprompt
+printf 'Authorization: Bearer sk-live-abc1234567890\n' | veilpaste
 ```
 
 Expected:
@@ -45,17 +45,17 @@ Authorization: Bearer [BEARER_TOKEN_1]
 Clipboard workflow on macOS:
 
 ```bash
-pbpaste | safeprompt --quiet | pbcopy
+pbpaste | veilpaste --quiet | pbcopy
 ```
 
 Use `--quiet` when piping because stdout should contain only scrubbed content.
 
 ## 3. Preview Before Scrubbing
 
-Use preview when you want to see what SafePrompt would redact:
+Use preview when you want to see what VeilPaste would redact:
 
 ```bash
-safeprompt scrub fixtures/curl/request.curl --preview
+veilpaste scrub fixtures/curl/request.curl --preview
 ```
 
 Expected shape:
@@ -73,30 +73,30 @@ Preview never prints the original secret value.
 Scrub and save a local mapping:
 
 ```bash
-rm -rf .safeprompt
-safeprompt scrub fixtures/env/openai.env --map .safeprompt/session.json > /tmp/safeprompt-safe.env
+rm -rf .veilpaste
+veilpaste scrub fixtures/env/openai.env --map .veilpaste/session.json > /tmp/veilpaste-safe.env
 ```
 
 Inspect scrubbed output:
 
 ```bash
-cat /tmp/safeprompt-safe.env
+cat /tmp/veilpaste-safe.env
 ```
 
 Restore locally:
 
 ```bash
-safeprompt restore /tmp/safeprompt-safe.env --map .safeprompt/session.json
+veilpaste restore /tmp/veilpaste-safe.env --map .veilpaste/session.json
 ```
 
-Important: `.safeprompt/session.json` contains original secrets. Do not commit it.
+Important: `.veilpaste/session.json` contains original secrets. Do not commit it.
 
 ## 5. Check Mode
 
 Use `check` for pre-commit hooks or CI-style local checks:
 
 ```bash
-safeprompt check fixtures/headers/auth.txt
+veilpaste check fixtures/headers/auth.txt
 ```
 
 If secrets are found, exit code is `1` and a summary is printed.
@@ -104,7 +104,7 @@ If secrets are found, exit code is `1` and a summary is printed.
 Clean example:
 
 ```bash
-safeprompt check fixtures/false-positives/common.txt
+veilpaste check fixtures/false-positives/common.txt
 ```
 
 Expected:
@@ -118,7 +118,7 @@ No high-confidence secrets found.
 Default mode only redacts high-confidence secrets. Use `--strict` if you accept more false positives:
 
 ```bash
-printf 'custom token: abcdefghijklmnopqrstuvwxyz1234567890\n' | safeprompt scrub --strict
+printf 'custom token: abcdefghijklmnopqrstuvwxyz1234567890\n' | veilpaste scrub --strict
 ```
 
 Use strict mode for extra-sensitive review, not as the default daily workflow.
@@ -128,7 +128,7 @@ Use strict mode for extra-sensitive review, not as the default daily workflow.
 Use this 20-second explanation:
 
 ```txt
-SafePrompt is a local CLI that cleans logs, curl commands, .env files, and headers before you paste them into AI. It does not call the network or collect telemetry. It only redacts high-confidence secrets by default, and it can save a local mapping so AI-edited output can be restored.
+VeilPaste is a local CLI that cleans logs, curl commands, .env files, and headers before you paste them into AI. It does not call the network or collect telemetry. It only redacts high-confidence secrets by default, and it can save a local mapping so AI-edited output can be restored.
 ```
 
 Ask early users:

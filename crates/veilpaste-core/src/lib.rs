@@ -94,12 +94,12 @@ impl ScrubResult {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum SafePromptError {
+pub enum VeilPasteError {
     #[error("invalid mapping store version: {0}")]
     InvalidMappingVersion(u8),
 }
 
-pub fn scrub(input: &str, options: ScrubOptions) -> Result<ScrubResult, SafePromptError> {
+pub fn scrub(input: &str, options: ScrubOptions) -> Result<ScrubResult, VeilPasteError> {
     let findings = plan_findings(detect_all(input), options.strict);
     let mut allocator = PlaceholderAllocator::default();
     let redactions = findings
@@ -128,9 +128,9 @@ pub fn scrub(input: &str, options: ScrubOptions) -> Result<ScrubResult, SafeProm
     })
 }
 
-pub fn restore(input: &str, mapping: &MappingStore) -> Result<String, SafePromptError> {
+pub fn restore(input: &str, mapping: &MappingStore) -> Result<String, VeilPasteError> {
     if mapping.version != 0 && mapping.version != 1 {
-        return Err(SafePromptError::InvalidMappingVersion(mapping.version));
+        return Err(VeilPasteError::InvalidMappingVersion(mapping.version));
     }
 
     let mut output = input.to_owned();

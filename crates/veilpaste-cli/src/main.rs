@@ -1,13 +1,13 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use safeprompt_core::{restore, scrub, MappingStore, ScrubOptions};
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{self, Command as ProcessCommand};
+use veilpaste_core::{restore, scrub, MappingStore, ScrubOptions};
 
 #[derive(Debug, Parser)]
-#[command(name = "safeprompt")]
+#[command(name = "veilpaste")]
 #[command(version)]
 #[command(about = "Local secret redaction before pasting developer context into AI")]
 struct Cli {
@@ -45,7 +45,7 @@ fn main() {
     match run() {
         Ok(code) => process::exit(code),
         Err(error) => {
-            eprintln!("safeprompt: {error:#}");
+            eprintln!("veilpaste: {error:#}");
             process::exit(2);
         }
     }
@@ -159,7 +159,7 @@ fn warn_if_mapping_is_not_ignored(map_path: &Path, quiet: bool) {
     }
 
     eprintln!(
-        "WARNING: mapping file contains original secrets. Do not commit it. Add .safeprompt/ to .gitignore."
+        "WARNING: mapping file contains original secrets. Do not commit it. Add .veilpaste/ to .gitignore."
     );
 }
 

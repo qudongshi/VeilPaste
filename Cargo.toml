@@ -1,8 +1,8 @@
 [workspace]
 members = [
-    "crates/safeprompt-core",
-    "crates/safeprompt-rules",
-    "crates/safeprompt-cli",
+    "crates/veilpaste-core",
+    "crates/veilpaste-rules",
+    "crates/veilpaste-cli",
 ]
 resolver = "2"
 

@@ -1,4 +1,4 @@
-# SafePrompt Demo Script
+# VeilPaste Demo Script
 
 Use this script to record a 30-60 second terminal demo.
 
@@ -10,13 +10,13 @@ Optional:
 
 ```bash
 cargo build
-alias safeprompt='cargo run -q -p safeprompt-cli --bin safeprompt --'
+alias veilpaste='cargo run -q -p veilpaste-cli --bin veilpaste --'
 ```
 
 If installed:
 
 ```bash
-safeprompt --version
+veilpaste --version
 ```
 
 ## Demo 1: One-Line Redaction
@@ -30,7 +30,7 @@ I want to paste an Authorization header into AI, but not the token.
 Command:
 
 ```bash
-printf 'Authorization: Bearer sk-live-abc1234567890\n' | safeprompt
+printf 'Authorization: Bearer sk-live-abc1234567890\n' | veilpaste
 ```
 
 Expected:
@@ -44,13 +44,13 @@ Authorization: Bearer [BEARER_TOKEN_1]
 Narration:
 
 ```txt
-Before I scrub a curl request, I can preview exactly what SafePrompt will redact.
+Before I scrub a curl request, I can preview exactly what VeilPaste will redact.
 ```
 
 Command:
 
 ```bash
-safeprompt scrub fixtures/curl/request.curl --preview
+veilpaste scrub fixtures/curl/request.curl --preview
 ```
 
 Expected:
@@ -66,15 +66,15 @@ WOULD_REDACT  High  CookieValue     line 3 col 25  -> [COOKIE_1]
 Narration:
 
 ```txt
-SafePrompt can save a local mapping, so placeholders can be restored after AI edits.
+VeilPaste can save a local mapping, so placeholders can be restored after AI edits.
 ```
 
 Command:
 
 ```bash
-rm -rf .safeprompt
-safeprompt scrub fixtures/env/openai.env --map .safeprompt/session.json > /tmp/safeprompt-safe.env
-cat /tmp/safeprompt-safe.env
+rm -rf .veilpaste
+veilpaste scrub fixtures/env/openai.env --map .veilpaste/session.json > /tmp/veilpaste-safe.env
+cat /tmp/veilpaste-safe.env
 ```
 
 Expected:
@@ -87,8 +87,8 @@ DATABASE_PASSWORD=[ENV_SECRET_1]
 Command:
 
 ```bash
-sed 's/OPENAI_API_KEY/FIXED_OPENAI_API_KEY/' /tmp/safeprompt-safe.env > /tmp/safeprompt-ai-output.env
-safeprompt restore /tmp/safeprompt-ai-output.env --map .safeprompt/session.json
+sed 's/OPENAI_API_KEY/FIXED_OPENAI_API_KEY/' /tmp/veilpaste-safe.env > /tmp/veilpaste-ai-output.env
+veilpaste restore /tmp/veilpaste-ai-output.env --map .veilpaste/session.json
 ```
 
 Expected:
@@ -101,6 +101,6 @@ DATABASE_PASSWORD=super-secret-password
 ## Closing Line
 
 ```txt
-SafePrompt is local, no telemetry by default, and only redacts high-confidence secrets unless you ask for strict mode.
+VeilPaste is local, no telemetry by default, and only redacts high-confidence secrets unless you ask for strict mode.
 ```
 

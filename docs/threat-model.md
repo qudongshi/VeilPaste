@@ -1,12 +1,12 @@
-# SafePrompt Threat Model
+# VeilPaste Threat Model
 
-## SafePrompt V0 Defends Against
+## VeilPaste V0 Defends Against
 
 - Accidentally pasting known secret formats into AI tools.
 - Sending `.env`, curl, HTTP headers, logs, or config snippets with high-confidence tokens.
 - Losing local usability after redaction by using reversible placeholders and a local mapping file.
 
-## SafePrompt V0 Does Not Guarantee
+## VeilPaste V0 Does Not Guarantee
 
 - Detecting every possible secret.
 - Detecting all PII.
@@ -21,18 +21,18 @@ Mapping files contain original secrets.
 Do not commit files such as:
 
 ```txt
-.safeprompt/session.json
+.veilpaste/session.json
 ```
 
 Recommended `.gitignore` entry:
 
 ```gitignore
-.safeprompt/
+.veilpaste/
 ```
 
 ## Operational Guidance
 
-- Use `safeprompt scrub --preview` before first use on a new input type.
+- Use `veilpaste scrub --preview` before first use on a new input type.
 - Use `--strict` only when you accept more false positives.
 - Use `--quiet` for clipboard and shell pipelines.
 - Manually review high-sensitivity content after scrubbing.

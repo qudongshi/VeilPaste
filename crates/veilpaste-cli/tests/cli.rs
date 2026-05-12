@@ -7,7 +7,7 @@ use tempfile::NamedTempFile;
 
 #[test]
 fn default_stdin_scrubs_to_stdout() {
-    let mut cmd = Command::cargo_bin("safeprompt").expect("binary exists");
+    let mut cmd = Command::cargo_bin("veilpaste").expect("binary exists");
 
     cmd.write_stdin("Authorization: Bearer sk-live-abc1234567890")
         .assert()
@@ -21,7 +21,7 @@ fn preview_lists_redactions_without_scrubbed_body() {
     let mut input = NamedTempFile::new().expect("temp file");
     writeln!(input, "OPENAI_API_KEY=sk-proj-abcdefghijklmnopqrstuvwxyz").unwrap();
 
-    let mut cmd = Command::cargo_bin("safeprompt").expect("binary exists");
+    let mut cmd = Command::cargo_bin("veilpaste").expect("binary exists");
     cmd.args(["scrub", input.path().to_str().unwrap(), "--preview"])
         .assert()
         .success()
@@ -35,7 +35,7 @@ fn check_exits_one_when_secret_is_found() {
     let mut input = NamedTempFile::new().expect("temp file");
     writeln!(input, "Authorization: Bearer sk-live-abc1234567890").unwrap();
 
-    let mut cmd = Command::cargo_bin("safeprompt").expect("binary exists");
+    let mut cmd = Command::cargo_bin("veilpaste").expect("binary exists");
     cmd.args(["check", input.path().to_str().unwrap()])
         .assert()
         .code(1);
@@ -54,7 +54,7 @@ fn scrub_writes_mapping_and_restore_uses_it() {
     )
     .unwrap();
 
-    let mut scrub = Command::cargo_bin("safeprompt").expect("binary exists");
+    let mut scrub = Command::cargo_bin("veilpaste").expect("binary exists");
     let scrubbed = scrub
         .args([
             "scrub",
@@ -76,7 +76,7 @@ fn scrub_writes_mapping_and_restore_uses_it() {
     )
     .unwrap();
 
-    let mut restore = Command::cargo_bin("safeprompt").expect("binary exists");
+    let mut restore = Command::cargo_bin("veilpaste").expect("binary exists");
     restore
         .args([
             "restore",
@@ -93,7 +93,7 @@ fn scrub_writes_mapping_and_restore_uses_it() {
 
 #[test]
 fn quiet_flag_is_accepted_for_pipeline_use() {
-    let mut cmd = Command::cargo_bin("safeprompt").expect("binary exists");
+    let mut cmd = Command::cargo_bin("veilpaste").expect("binary exists");
 
     cmd.args(["--quiet"])
         .write_stdin("Authorization: Bearer sk-live-abc1234567890")
@@ -111,14 +111,14 @@ fn warns_when_mapping_file_is_inside_git_repo_without_ignore_rule() {
         .output()
         .expect("git init should run");
     let input_path = dir.path().join("input.env");
-    let map_path = dir.path().join(".safeprompt/session.json");
+    let map_path = dir.path().join(".veilpaste/session.json");
     fs::write(
         &input_path,
         "OPENAI_API_KEY=sk-proj-abcdefghijklmnopqrstuvwxyz",
     )
     .unwrap();
 
-    let mut cmd = Command::cargo_bin("safeprompt").expect("binary exists");
+    let mut cmd = Command::cargo_bin("veilpaste").expect("binary exists");
     cmd.current_dir(dir.path())
         .args([
             "scrub",
@@ -131,12 +131,12 @@ fn warns_when_mapping_file_is_inside_git_repo_without_ignore_rule() {
         .stderr(predicate::str::contains(
             "mapping file contains original secrets",
         ))
-        .stderr(predicate::str::contains(".safeprompt/"));
+        .stderr(predicate::str::contains(".veilpaste/"));
 }
 
 #[test]
 fn version_flag_prints_crate_version() {
-    let mut cmd = Command::cargo_bin("safeprompt").expect("binary exists");
+    let mut cmd = Command::cargo_bin("veilpaste").expect("binary exists");
 
     cmd.arg("--version")
         .assert()
@@ -149,7 +149,7 @@ fn check_prints_summary_for_found_secrets() {
     let mut input = NamedTempFile::new().expect("temp file");
     writeln!(input, "Authorization: Bearer sk-live-abc1234567890").unwrap();
 
-    let mut cmd = Command::cargo_bin("safeprompt").expect("binary exists");
+    let mut cmd = Command::cargo_bin("veilpaste").expect("binary exists");
     cmd.args(["check", input.path().to_str().unwrap()])
         .assert()
         .code(1)
@@ -162,7 +162,7 @@ fn check_prints_clean_summary_when_no_secret_is_found() {
     let mut input = NamedTempFile::new().expect("temp file");
     writeln!(input, "word=sketch").unwrap();
 
-    let mut cmd = Command::cargo_bin("safeprompt").expect("binary exists");
+    let mut cmd = Command::cargo_bin("veilpaste").expect("binary exists");
     cmd.args(["check", input.path().to_str().unwrap()])
         .assert()
         .success()

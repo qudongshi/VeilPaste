@@ -1,5 +1,5 @@
 [package]
-name = "safeprompt-rules"
+name = "veilpaste-rules"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

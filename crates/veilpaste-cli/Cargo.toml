@@ -1,17 +1,17 @@
 [package]
-name = "safeprompt-cli"
+name = "veilpaste-cli"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [[bin]]
-name = "safeprompt"
+name = "veilpaste"
 path = "src/main.rs"
 
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
-safeprompt-core = { path = "../safeprompt-core" }
+veilpaste-core = { path = "../veilpaste-core" }
 serde_json.workspace = true
 
 [dev-dependencies]

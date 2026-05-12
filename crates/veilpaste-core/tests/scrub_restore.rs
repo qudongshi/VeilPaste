@@ -1,6 +1,6 @@
-use safeprompt_core::{restore, scrub, ScrubOptions, SecretKind};
 use std::fs;
 use std::path::Path;
+use veilpaste_core::{restore, scrub, ScrubOptions, SecretKind};
 
 #[test]
 fn scrubs_high_confidence_secrets_and_preserves_structure() {
