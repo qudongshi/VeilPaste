@@ -1,0 +1,4 @@
+curl 'https://api.example.test/users?api_key=secret_query_value' \
+  -H 'Authorization: Bearer sk-live-abc1234567890' \
+  -H 'Cookie: sessionid=prod_cookie_value'
+

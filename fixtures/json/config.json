@@ -1,0 +1,5 @@
+{
+  "openai_api_key": "sk-proj-abcdefghijklmnopqrstuvwxyz",
+  "webhook_url": "https://example.test/hook?token=secret_query_value"
+}
+

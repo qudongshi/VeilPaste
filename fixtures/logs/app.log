@@ -1,0 +1,2 @@
+2026-05-12T12:00:00Z INFO retrying request Authorization: Bearer sk-live-abc1234567890
+2026-05-12T12:00:01Z INFO callback=https://example.test/cb?api_key=secret_query_value

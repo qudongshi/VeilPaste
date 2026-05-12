@@ -1,0 +1,3 @@
+Authorization: Bearer sk-live-abc1234567890
+Cookie: sessionid=prod_cookie_value; theme=dark
+
