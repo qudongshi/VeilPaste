@@ -1,6 +1,6 @@
 # VeilPaste Usage Guide
 
-This guide shows how to install VeilPaste, run the common workflows, and explain it to early users.
+This guide shows how to install VeilPaste and use the common workflows. VeilPaste checks developer text before it reaches AI and replaces obvious secrets with readable placeholders.
 
 ## 1. Install Locally
 
@@ -74,22 +74,28 @@ Scrub and save a local mapping:
 
 ```bash
 rm -rf .veilpaste
-veilpaste scrub fixtures/env/openai.env --map .veilpaste/session.json > /tmp/veilpaste-safe.env
+veilpaste scrub fixtures/env/openai.env --map .veilpaste/session.json > /tmp/veilpaste-redacted.env
 ```
 
 Inspect scrubbed output:
 
 ```bash
-cat /tmp/veilpaste-safe.env
+cat /tmp/veilpaste-redacted.env
 ```
 
 Restore locally:
 
 ```bash
-veilpaste restore /tmp/veilpaste-safe.env --map .veilpaste/session.json
+veilpaste restore /tmp/veilpaste-redacted.env --map .veilpaste/session.json
 ```
 
-Important: `.veilpaste/session.json` contains original secrets. Do not commit it.
+Important: `.veilpaste/session.json` contains original secrets. Do not commit it. Restore is a plain-text placeholder replacement workflow and does not guarantee that AI kept placeholders in the original semantic position.
+
+Inspect a mapping without printing original secret values:
+
+```bash
+veilpaste map inspect --map .veilpaste/session.json
+```
 
 ## 5. Check Mode
 
@@ -128,7 +134,13 @@ Use strict mode for extra-sensitive review, not as the default daily workflow.
 Use this 20-second explanation:
 
 ```txt
-VeilPaste is a local CLI that cleans logs, curl commands, .env files, and headers before you paste them into AI. It does not call the network or collect telemetry. It only redacts high-confidence secrets by default, and it can save a local mapping so AI-edited output can be restored.
+VeilPaste checks logs, curl commands, .env files, and headers before you paste them into AI. It runs locally and replaces obvious secrets with placeholders.
+```
+
+More precise version:
+
+```txt
+VeilPaste lowers the chance of leaking obvious secrets, but it does not prove a prompt is safe. Review sensitive content before sending it to AI.
 ```
 
 Ask early users:
@@ -136,4 +148,3 @@ Ask early users:
 1. Did you paste logs, curl, `.env`, headers, or stack traces into AI in the last 30 days?
 2. Would you install this as a CLI?
 3. Which workflow matters most next: Chrome, DevTools, Postman, Cursor, or Claude Code?
-

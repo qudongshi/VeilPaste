@@ -44,7 +44,7 @@ Authorization: Bearer [BEARER_TOKEN_1]
 Narration:
 
 ```txt
-Before I scrub a curl request, I can preview exactly what VeilPaste will redact.
+Before I scrub a curl request, I can preview which high-confidence secrets VeilPaste will redact.
 ```
 
 Command:
@@ -66,15 +66,15 @@ WOULD_REDACT  High  CookieValue     line 3 col 25  -> [COOKIE_1]
 Narration:
 
 ```txt
-VeilPaste can save a local mapping, so placeholders can be restored after AI edits.
+VeilPaste can optionally save a local mapping, so placeholders can be restored after simple AI edits.
 ```
 
 Command:
 
 ```bash
 rm -rf .veilpaste
-veilpaste scrub fixtures/env/openai.env --map .veilpaste/session.json > /tmp/veilpaste-safe.env
-cat /tmp/veilpaste-safe.env
+veilpaste scrub fixtures/env/openai.env --map .veilpaste/session.json > /tmp/veilpaste-redacted.env
+cat /tmp/veilpaste-redacted.env
 ```
 
 Expected:
@@ -87,7 +87,7 @@ DATABASE_PASSWORD=[ENV_SECRET_1]
 Command:
 
 ```bash
-sed 's/OPENAI_API_KEY/FIXED_OPENAI_API_KEY/' /tmp/veilpaste-safe.env > /tmp/veilpaste-ai-output.env
+sed 's/OPENAI_API_KEY/FIXED_OPENAI_API_KEY/' /tmp/veilpaste-redacted.env > /tmp/veilpaste-ai-output.env
 veilpaste restore /tmp/veilpaste-ai-output.env --map .veilpaste/session.json
 ```
 
@@ -101,6 +101,5 @@ DATABASE_PASSWORD=super-secret-password
 ## Closing Line
 
 ```txt
-VeilPaste is local, no telemetry by default, and only redacts high-confidence secrets unless you ask for strict mode.
+VeilPaste is a small local utility with no telemetry by default. It catches obvious secrets before AI paste to reduce security risk.
 ```
-

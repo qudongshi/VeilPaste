@@ -1,22 +1,10 @@
 # VeilPaste
 
-```txt
-Paste safely into AI.
-```
+Paste into AI without leaking obvious secrets.
 
-VeilPaste is a local CLI airlock for developer context. It scrubs high-confidence secrets from logs, curl commands, `.env` files, headers, and config snippets before you paste them into ChatGPT, Claude, Codex, or other AI tools.
+VeilPaste checks text before it reaches AI tools. It looks for common developer secrets such as API keys, Bearer tokens, cookies, private keys, and database URLs, then replaces them with readable placeholders.
 
-## Why
-
-Developers routinely paste debugging context into AI:
-
-- production logs
-- curl requests
-- `.env` files
-- stack traces
-- HTTP headers
-
-Those snippets often contain API keys, Bearer tokens, JWTs, cookies, and URL secrets. Manual deletion is fragile.
+It runs locally by default. It does not upload your prompt, store secret values, or require an account.
 
 ## Quick Demo
 
@@ -43,15 +31,28 @@ veilpaste scrub fixtures/curl/request.curl --preview
 ```
 
 Full walkthrough: [docs/usage-guide.md](docs/usage-guide.md).
-Recording script: [docs/demo-script.md](docs/demo-script.md).
+
+## Chrome Extension
+
+The Chrome extension pauses risky paste operations on ChatGPT, Claude, Perplexity, Doubao, and Qwen.
+
+When VeilPaste finds a possible leak, you can choose:
+
+- paste without redaction
+- redact this paste
+- always redact this kind of paste on the current site
+
+Load it from `chrome-extension/` while testing locally.
 
 ## Reversible Redaction
 
+For local file-editing workflows, VeilPaste can keep a local restore map:
+
 ```bash
-veilpaste scrub .env --map .veilpaste/session.json > safe.env
+veilpaste scrub .env --map .veilpaste/session.json > redacted.env
 ```
 
-Example scrub:
+Example:
 
 ```txt
 OPENAI_API_KEY=sk-proj-abcdefghijklmnopqrstuvwxyz
@@ -63,11 +64,13 @@ becomes:
 OPENAI_API_KEY=[OPENAI_KEY_1]
 ```
 
-If AI returns an edited file containing `[OPENAI_KEY_1]`, restore locally:
+If AI returns an edited file containing `[OPENAI_KEY_1]`, restore it locally:
 
 ```bash
 veilpaste restore ai-output.env --map .veilpaste/session.json
 ```
+
+The map contains original secrets. Keep it local and do not commit it.
 
 ## Commands
 
@@ -83,7 +86,7 @@ veilpaste check input.txt
 veilpaste explain input.txt
 ```
 
-Use `--quiet` for pipelines where stdout must contain only scrubbed content.
+Use `--quiet` when stdout should contain only redacted text.
 
 ## Install From This Checkout
 
@@ -97,54 +100,32 @@ Equivalent command:
 cargo install --path crates/veilpaste-cli
 ```
 
-## Release Checks
+## What It Catches
 
-```bash
-cargo fmt --all --check
-cargo test
-cargo build --release
-veilpaste --version
-```
+VeilPaste focuses on high-confidence developer secrets:
 
-## V0 Detection Scope
-
-VeilPaste V0 defaults to high-confidence secrets only:
-
-- Bearer token
-- JWT
-- Cookie values
-- OpenAI keys
-- AWS access keys
-- GitHub `ghp_` / `ghs_` tokens
-- Stripe `sk_live_` / `pk_live_` keys
+- Bearer tokens and basic auth credentials
+- API key headers
+- JWTs and cookie values
+- OpenAI, AWS, GitHub, and Stripe keys
 - `.env` secret values
-- URL query secrets such as `token`, `api_key`, `secret`, `password`
+- database and service URLs
+- Slack and Discord webhook URLs
+- URL username/password values
+- PEM private keys
+- npm, pypirc, and Docker registry credentials
+- URL query secrets such as `token`, `api_key`, `secret`, and `password`
 
-VeilPaste does not redact these by default:
+It does not redact ordinary email addresses, phone numbers, IP addresses, names, project names, or UUIDs by default.
 
-- email
-- phone number
-- normal IP address
-- person name
-- internal project name
-- ordinary UUID
+See [Known Misses](docs/known-misses.md) for unsupported cases.
 
-## Trust Guarantees
+## Trust Boundaries
 
-- No network calls by default.
+- Local processing by default.
 - No telemetry by default.
 - No account required.
-- Inputs are processed locally.
-- Mapping files stay local.
-
-If you write a mapping under `.veilpaste/` inside a git repo and the directory is not ignored, VeilPaste warns:
-
-```txt
-WARNING: mapping file contains original secrets. Do not commit it. Add .veilpaste/ to .gitignore.
-```
+- Mapping files stay on your machine.
+- Redaction lowers risk, but it does not prove a prompt is safe to send.
 
 Read [docs/threat-model.md](docs/threat-model.md) before using VeilPaste with highly sensitive data.
-
-## Warning
-
-VeilPaste is a first line of defense, not a complete firewall. Review highly sensitive content manually before sending it to any AI system.
