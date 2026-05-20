@@ -2,3 +2,5 @@
 .veilpaste/
 private/
 excalidraw.log
+.DS_Store
+*.profraw

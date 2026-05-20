@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VeilPaste 设置</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f1e8;
+        --panel: #fffdf8;
+        --panel-strong: #fff8ec;
+        --text: #121826;
+        --muted: #5f6b7a;
+        --line: #e3d8c8;
+        --line-strong: #cdbda8;
+        --accent: #b45309;
+        --accent-soft: #fff3df;
+        --critical: #dc2626;
+        --critical-soft: #fff1f2;
+        --warning: #ea580c;
+        --warning-soft: #fff7ed;
+        --code: #eef2f7;
+        --shadow: 0 28px 80px rgba(84, 60, 31, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 8% 12%, rgba(251, 191, 36, 0.2), transparent 28%),
+          radial-gradient(circle at 90% 0%, rgba(180, 83, 9, 0.12), transparent 24%),
+          linear-gradient(135deg, #fffaf1 0%, var(--bg) 48%, #f3eadf 100%);
+        font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      }
+
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+
+      code,
+      pre {
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      }
+
+      .console-shell {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+        gap: 16px;
+        width: min(1040px, calc(100vw - 32px));
+        margin: 20px auto;
+      }
+
+      .sidebar,
+      .content-panel {
+        border: 1px solid var(--line);
+        background: rgba(255, 253, 248, 0.9);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 24px;
+        align-self: start;
+        min-height: calc(100vh - 40px);
+        padding: 16px;
+        border-radius: 12px;
+      }
+
+      .brand {
+        display: grid;
+        grid-template-columns: 36px 1fr;
+        gap: 9px;
+        align-items: center;
+        padding: 2px 4px 14px;
+      }
+
+      .brand img {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        box-shadow: 0 10px 24px rgba(31, 41, 55, 0.14);
+      }
+
+      .brand-copy {
+        display: grid;
+        gap: 4px;
+        min-width: 0;
+      }
+
+      .brand strong {
+        font-size: 16px;
+        line-height: 1;
+        letter-spacing: 0;
+      }
+
+      .nav-list {
+        display: grid;
+        gap: 4px;
+      }
+
+      .nav-item {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        color: #334155;
+        background: transparent;
+        text-align: left;
+        cursor: pointer;
+        font-size: 13px;
+      }
+
+      .nav-item:hover,
+      .nav-item.is-active {
+        border-color: var(--line);
+        color: var(--text);
+        background: var(--accent-soft);
+      }
+
+      .content-panel {
+        min-height: calc(100vh - 40px);
+        padding: 24px;
+        border-radius: 12px;
+      }
+
+      .page-section[hidden] {
+        display: none;
+      }
+
+      .section-header {
+        max-width: 760px;
+        margin-bottom: 18px;
+      }
+
+      .eyebrow {
+        margin: 0 0 6px;
+        color: var(--accent);
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 8px;
+        font-size: 20px;
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin-bottom: 8px;
+        font-size: 15px;
+        letter-spacing: 0;
+      }
+
+      h3 {
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+
+      p {
+        color: var(--muted);
+      }
+
+      .metric-grid,
+      .site-grid,
+      .rule-grid,
+      .trust-grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .metric-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .site-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .rule-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .trust-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .card,
+      .site-card,
+      .rule-card,
+      .setting-card,
+      .trust-card,
+      .tester-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .card,
+      .site-card,
+      .rule-card,
+      .trust-card {
+        padding: 14px;
+      }
+
+      .card strong {
+        display: block;
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+
+      .card span,
+      .site-card p,
+      .rule-card p,
+      .trust-card p,
+      .rule-card small {
+        color: var(--muted);
+      }
+
+      .site-card {
+        display: grid;
+        gap: 8px;
+      }
+
+      .site-card code,
+      .rule-card code {
+        display: inline-block;
+        width: fit-content;
+        max-width: 100%;
+        padding: 3px 6px;
+        overflow-wrap: anywhere;
+        border-radius: 6px;
+        background: var(--code);
+        color: #334155;
+        font-size: 12px;
+      }
+
+      .status-pill,
+      .risk-label {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .status-pill {
+        padding: 3px 8px;
+        color: #166534;
+        background: #dcfce7;
+      }
+
+      .status-pill.muted {
+        color: #64748b;
+        background: #f1f5f9;
+      }
+
+      .site-card.muted {
+        background: #f8fafc;
+      }
+
+      .rule-section {
+        margin-top: 22px;
+      }
+
+      .rule-card {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 12px;
+      }
+
+      .rule-card.critical {
+        background: var(--critical-soft);
+        border-color: #fecaca;
+      }
+
+      .rule-card.warning {
+        background: var(--warning-soft);
+        border-color: #fed7aa;
+      }
+
+      .risk-label {
+        align-self: start;
+        padding: 4px 8px;
+        color: white;
+      }
+
+      .risk-label.critical {
+        background: var(--critical);
+      }
+
+      .risk-label.warning {
+        background: var(--warning);
+      }
+
+      .setting-card {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        max-width: 760px;
+        padding: 14px;
+        background: var(--panel-strong);
+      }
+
+      .setting-card input {
+        width: 18px;
+        height: 18px;
+        margin-top: 4px;
+        accent-color: var(--accent);
+      }
+
+      .setting-card span {
+        display: block;
+      }
+
+      .setting-card strong {
+        display: block;
+        font-size: 14px;
+      }
+
+      .trust-list {
+        display: grid;
+        gap: 10px;
+        max-width: 760px;
+        padding: 0;
+        list-style: none;
+      }
+
+      .trust-list li {
+        padding: 11px 13px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .tester-card {
+        display: grid;
+        gap: 12px;
+        max-width: 900px;
+        padding: 14px;
+      }
+
+      .tester-card textarea {
+        width: 100%;
+        min-height: 132px;
+        resize: vertical;
+        padding: 12px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        color: var(--text);
+        background: #fff;
+      }
+
+      .primary-action {
+        width: fit-content;
+        padding: 9px 14px;
+        border: 1px solid #d97706;
+        border-radius: 8px;
+        color: #7c2d12;
+        background: #ffedd5;
+        cursor: pointer;
+        font-weight: 800;
+      }
+
+      .result-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+        gap: 12px;
+      }
+
+      .result-box {
+        min-height: 96px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      .result-box ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      pre.result-box {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+
+      @media (max-width: 820px) {
+        .console-shell {
+          grid-template-columns: 1fr;
+          width: min(100vw - 24px, 760px);
+          margin: 12px auto;
+        }
+
+        .sidebar {
+          position: static;
+          min-height: auto;
+        }
+
+        .nav-list {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .content-panel {
+          min-height: auto;
+          padding: 22px;
+        }
+
+        .metric-grid,
+        .site-grid,
+        .rule-grid,
+        .trust-grid,
+        .result-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="console-shell">
+      <aside class="sidebar" aria-label="VeilPaste 设置">
+        <div class="brand">
+          <img src="icons/veilpaste_64.png" alt="" aria-hidden="true" />
+          <div class="brand-copy">
+            <strong>VeilPaste</strong>
+          </div>
+        </div>
+        <nav class="nav-list" aria-label="VeilPaste 设置导航">
+          <button class="nav-item" data-i18n="nav.overview" data-target="overview" type="button">总览</button>
+          <button class="nav-item" data-i18n="nav.sites" data-target="sites" type="button">保护网址</button>
+          <button class="nav-item" data-i18n="nav.rules" data-target="rules" type="button">保护规则</button>
+          <button class="nav-item is-active" data-i18n="nav.redaction" data-target="redaction" type="button">脱敏设置</button>
+          <button class="nav-item" data-i18n="nav.privacy" data-target="privacy" type="button">隐私与存储</button>
+          <button class="nav-item" data-i18n="nav.tester" data-target="tester" type="button">测试区</button>
+        </nav>
+      </aside>
+
+      <section class="content-panel">
+        <section class="page-section" data-section="overview" hidden>
+          <header class="section-header">
+            <p class="eyebrow">Overview</p>
+            <h1 data-i18n="overview.title">VeilPaste</h1>
+            <p data-i18n="overview.body">粘贴前先检查，发现敏感信息就提醒你脱敏。</p>
+          </header>
+          <div class="metric-grid">
+            <article class="card">
+              <strong>5</strong>
+              <span data-i18n="overview.metricSites">当前保护网址</span>
+            </article>
+            <article class="card">
+              <strong>20+</strong>
+              <span data-i18n="overview.metricRules">内置保护规则</span>
+            </article>
+            <article class="card">
+              <strong>0</strong>
+              <span data-i18n="overview.metricNetwork">网络请求</span>
+            </article>
+            <article class="card">
+              <strong data-i18n="overview.metricLocalValue">本地</strong>
+              <span data-i18n="overview.metricLocal">检测与脱敏</span>
+            </article>
+          </div>
+        </section>
+
+        <section class="page-section" data-section="sites" hidden>
+          <header class="section-header">
+            <p class="eyebrow">Protected Sites</p>
+            <h1 data-i18n="sites.title">保护网址</h1>
+            <p data-i18n="sites.body">VeilPaste 只在这些 AI 网站检查粘贴内容。</p>
+          </header>
+          <div class="site-grid">
+            <article class="site-card">
+              <span class="status-pill" data-i18n="status.enabled">已启用</span>
+              <h2>ChatGPT</h2>
+              <code>https://chatgpt.com/*</code>
+            </article>
+            <article class="site-card">
+              <span class="status-pill" data-i18n="status.enabled">已启用</span>
+              <h2>Claude</h2>
+              <code>https://claude.ai/*</code>
+            </article>
+            <article class="site-card">
+              <span class="status-pill" data-i18n="status.enabled">已启用</span>
+              <h2>Perplexity</h2>
+              <code>https://www.perplexity.ai/*</code>
+            </article>
+            <article class="site-card">
+              <span class="status-pill" data-i18n="status.enabled">已启用</span>
+              <h2>Doubao</h2>
+              <code>https://www.doubao.com/*</code>
+            </article>
+            <article class="site-card">
+              <span class="status-pill" data-i18n="status.enabled">已启用</span>
+              <h2>Qwen</h2>
+              <code>https://chat.qwen.ai/*</code>
+            </article>
+            <article class="site-card muted">
+              <span class="status-pill muted" data-i18n="status.disabled">未启用</span>
+              <h2 data-i18n="sites.customTitle">自定义网址</h2>
+              <p data-i18n="sites.customBody">当前不能自己添加网址。后续会单独设计这个能力。</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="page-section" data-section="rules" hidden>
+          <header class="section-header">
+            <p class="eyebrow">Protection Rules</p>
+            <h1 data-i18n="rules.title">保护规则</h1>
+            <p data-i18n="rules.body">这些是当前内置启用的高置信规则。当前不支持自定义规则。</p>
+          </header>
+
+          <div class="rule-section">
+            <h2 data-i18n="rules.critical">严重</h2>
+            <div class="rule-grid">
+              <article class="rule-card critical">
+                <span class="risk-label critical" data-i18n="rules.critical">严重</span>
+                <div>
+                  <h3>OpenAI Key</h3>
+                  <p data-i18n="rules.openaiRisk">会泄漏 AI 服务访问额度或项目权限。</p>
+                  <code>OPENAI_API_KEY=[TOKEN_VALUE]</code>
+                  <small data-i18n="rules.enabled">内置启用</small>
+                </div>
+              </article>
+              <article class="rule-card critical">
+                <span class="risk-label critical" data-i18n="rules.critical">严重</span>
+                <div>
+                  <h3 data-i18n="rules.bearerTitle">Bearer 访问令牌</h3>
+                  <p data-i18n="rules.bearerRisk">会泄漏账号或服务访问权限。</p>
+                  <code>Authorization: Bearer [TOKEN_VALUE]</code>
+                  <small data-i18n="rules.enabled">内置启用</small>
+                </div>
+              </article>
+              <article class="rule-card critical">
+                <span class="risk-label critical" data-i18n="rules.critical">严重</span>
+                <div>
+                  <h3 data-i18n="rules.cookieTitle">Cookie sessionid</h3>
+                  <p data-i18n="rules.cookieRisk">会泄漏登录会话或身份状态。</p>
+                  <code>Cookie: sessionid=[SESSION_VALUE]</code>
+                  <small data-i18n="rules.enabled">内置启用</small>
+                </div>
+              </article>
+              <article class="rule-card critical">
+                <span class="risk-label critical" data-i18n="rules.critical">严重</span>
+                <div>
+                  <h3 data-i18n="rules.urlTokenTitle">URL 参数 token/api_key</h3>
+                  <p data-i18n="rules.urlTokenRisk">会泄漏请求里的密钥、访问口令或临时凭证。</p>
+                  <code>?api_key=[TOKEN_VALUE]</code>
+                  <small data-i18n="rules.enabled">内置启用</small>
+                </div>
+              </article>
+              <article class="rule-card critical">
+                <span class="risk-label critical" data-i18n="rules.critical">严重</span>
+                <div>
+                  <h3>GitHub Token / AWS Key / Stripe Key</h3>
+                  <p data-i18n="rules.providerKeyRisk">会泄漏代码仓库、云资源或支付服务访问权限。</p>
+                  <code>ghp_[TOKEN_VALUE]</code>
+                  <small data-i18n="rules.enabled">内置启用</small>
+                </div>
+              </article>
+              <article class="rule-card critical">
+                <span class="risk-label critical" data-i18n="rules.critical">严重</span>
+                <div>
+                  <h3 data-i18n="rules.databaseTitle">数据库 URL / PEM 私钥</h3>
+                  <p data-i18n="rules.databaseRisk">会泄漏数据库连接信息或私钥材料。</p>
+                  <code>DATABASE_URL=postgres://[SECRET]</code>
+                  <small data-i18n="rules.enabled">内置启用</small>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <div class="rule-section">
+            <h2 data-i18n="rules.warning">提醒</h2>
+            <div class="rule-grid">
+              <article class="rule-card warning">
+                <span class="risk-label warning" data-i18n="rules.warning">提醒</span>
+                <div>
+                  <h3>Sentry DSN</h3>
+                  <p data-i18n="rules.sentryRisk">可能暴露项目上报入口。</p>
+                  <code>SENTRY_DSN=https://[PUBLIC]:[SECRET]@host/id</code>
+                  <small data-i18n="rules.enabled">内置启用</small>
+                </div>
+              </article>
+              <article class="rule-card warning">
+                <span class="risk-label warning" data-i18n="rules.warning">提醒</span>
+                <div>
+                  <h3>Webhook URL</h3>
+                  <p data-i18n="rules.webhookRisk">可能暴露 Slack、Discord 等 webhook 投递入口。</p>
+                  <code>WEBHOOK_URL=https://hooks.slack.com/[PATH]</code>
+                  <small data-i18n="rules.enabled">内置启用</small>
+                </div>
+              </article>
+              <article class="rule-card warning">
+                <span class="risk-label warning" data-i18n="rules.warning">提醒</span>
+                <div>
+                  <h3 data-i18n="rules.basicAuthTitle">URL userinfo / Basic Auth</h3>
+                  <p data-i18n="rules.basicAuthRisk">可能把用户名、密码或基础认证值带入 AI。</p>
+                  <code>https://user:[PASSWORD]@host</code>
+                  <small data-i18n="rules.enabled">内置启用</small>
+                </div>
+              </article>
+              <article class="rule-card warning">
+                <span class="risk-label warning" data-i18n="rules.warning">提醒</span>
+                <div>
+                  <h3 data-i18n="rules.packageAuthTitle">npm / pypirc / Docker registry auth</h3>
+                  <p data-i18n="rules.packageAuthRisk">可能泄漏包管理器或镜像仓库认证信息。</p>
+                  <code>_authToken=[TOKEN_VALUE]</code>
+                  <small data-i18n="rules.enabled">内置启用</small>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="page-section is-active" data-section="redaction">
+          <header class="section-header">
+            <p class="eyebrow">Redaction</p>
+            <h1 data-i18n="redaction.title">脱敏设置</h1>
+            <p data-i18n="redaction.body">设置发现敏感信息后的处理方式。</p>
+          </header>
+
+          <label class="setting-card">
+            <input id="autoRedactEnabled" type="checkbox" />
+            <span>
+              <strong data-i18n="redaction.autoTitle">启用“以后自动脱敏”</strong>
+              <span data-i18n="redaction.autoBody">开启后才显示“以后自动脱敏”。记录按网站隔离，刷新页面后失效。</span>
+            </span>
+          </label>
+        </section>
+
+        <section class="page-section" data-section="privacy" hidden>
+          <header class="section-header">
+            <p class="eyebrow">Privacy</p>
+            <h1 data-i18n="privacy.title">隐私与存储</h1>
+            <p data-i18n="privacy.body">VeilPaste 的默认边界是本地处理、最小存储。</p>
+          </header>
+          <ul class="trust-list">
+            <li data-i18n="privacy.noUpload">不上传粘贴内容</li>
+            <li data-i18n="privacy.noSecrets">不保存敏感值</li>
+            <li data-i18n="privacy.noPrompt">不保存完整 prompt</li>
+            <li data-i18n="privacy.noNetwork">不发网络请求</li>
+            <li data-i18n="privacy.remember">只记住你是否开启“以后自动脱敏”。</li>
+            <li data-i18n="privacy.background">设置页只在你点击设置时打开。</li>
+            <li data-i18n="privacy.hosts">只在 ChatGPT、Claude、Perplexity、豆包和 Qwen 上工作。</li>
+            <li data-i18n="privacy.session">临时记录刷新页面后失效。</li>
+          </ul>
+        </section>
+
+        <section class="page-section" data-section="tester" hidden>
+          <header class="section-header">
+            <p class="eyebrow">Local Test</p>
+            <h1 data-i18n="tester.title">测试区</h1>
+            <p data-i18n="tester.body">粘贴一段假数据进行本地测试，查看 VeilPaste 会识别哪些规则。内容只在本页面本地处理。</p>
+          </header>
+          <div class="tester-card">
+            <textarea id="ruleTesterInput" spellcheck="false">Authorization: Bearer sk-live-abc1234567890</textarea>
+            <button id="ruleTesterRun" class="primary-action" data-i18n="tester.run" type="button">本地测试</button>
+            <div class="result-grid">
+              <div>
+                <h2 data-i18n="tester.findingsTitle">检测结果</h2>
+                <div id="ruleTesterFindings" class="result-box" aria-live="polite"></div>
+              </div>
+              <div>
+                <h2 data-i18n="tester.outputTitle">脱敏后结果</h2>
+                <pre id="ruleTesterOutput" class="result-box"></pre>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+    <script type="module" src="dist/options.js"></script>
+  </body>
+</html>

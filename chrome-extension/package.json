@@ -1,0 +1,11 @@
+{
+  "name": "veilpaste-chrome-prototype",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/check-contract.mjs && npm run build && node scripts/check-package.mjs && npm test",
+    "check:package": "node scripts/check-package.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}
