@@ -1,0 +1,68 @@
+{
+  "cases": [
+    {
+      "file": "env.local",
+      "should_redact": [
+        { "kind": "DatabaseUrl", "contains": "postgres://app:dbpass@example.test/prod", "placeholder_prefix": "DATABASE_URL" },
+        { "kind": "RedisUrl", "contains": "redis://:redispass@cache.example.test:6379/0", "placeholder_prefix": "REDIS_URL" },
+        { "kind": "MongoUri", "contains": "mongodb://mongo:mongopass@mongo.example.test/app", "placeholder_prefix": "MONGO_URI" },
+        { "kind": "SentryDsn", "contains": "https://public:private@sentry.example.test/42", "placeholder_prefix": "SENTRY_DSN" },
+        { "kind": "WebhookUrl", "contains": "https://hooks.slack.com/services/T000/B000/secretwebhook", "placeholder_prefix": "WEBHOOK_URL" }
+      ],
+      "should_not_redact": [
+        { "contains": "DATABASE_POOL=10", "reason": "non-secret connection tuning" }
+      ],
+      "known_misses": []
+    },
+    {
+      "file": "browser-copy-as-curl.txt",
+      "should_redact": [
+        { "kind": "UrlUserInfo", "contains": "deploy:deploypass", "placeholder_prefix": "URL_USERINFO" },
+        { "kind": "ApiKeyHeader", "contains": "header-secret-value-12345", "placeholder_prefix": "API_KEY_HEADER" },
+        { "kind": "BasicAuth", "contains": "dXNlcjpwYXNzd29yZA==", "placeholder_prefix": "BASIC_AUTH" }
+      ],
+      "should_not_redact": [
+        { "contains": "debug=true", "reason": "non-secret query flag" }
+      ],
+      "known_misses": []
+    },
+    {
+      "file": "npmrc.txt",
+      "should_redact": [
+        { "kind": "NpmToken", "contains": "npm_secret_token_1234567890", "placeholder_prefix": "NPM_TOKEN" }
+      ],
+      "should_not_redact": [
+        { "contains": "@example:registry=https://registry.npmjs.org/", "reason": "registry config" }
+      ],
+      "known_misses": []
+    },
+    {
+      "file": "pypirc.txt",
+      "should_redact": [
+        { "kind": "PypircSecret", "contains": "pypi-secret-token-1234567890", "placeholder_prefix": "PYPIRC_SECRET" }
+      ],
+      "should_not_redact": [
+        { "contains": "username = __token__", "reason": "username marker" }
+      ],
+      "known_misses": []
+    },
+    {
+      "file": "docker-auth.json",
+      "should_redact": [
+        { "kind": "DockerAuth", "contains": "ZG9ja2VyOnNlY3JldA==", "placeholder_prefix": "DOCKER_AUTH" }
+      ],
+      "should_not_redact": [
+        { "contains": "dev@example.test", "reason": "ordinary email" }
+      ],
+      "known_misses": []
+    },
+    {
+      "file": "private-key.env",
+      "should_redact": [
+        { "kind": "PemPrivateKey", "contains": "MIIEvQIBADANBgkqhkiG9w0BAQEFAASC", "placeholder_prefix": "PEM_PRIVATE_KEY" }
+      ],
+      "should_not_redact": [],
+      "known_misses": []
+    }
+  ]
+}

@@ -6,6 +6,9 @@ use std::path::{Path, PathBuf};
 use std::process::{self, Command as ProcessCommand};
 use veilpaste_core::{restore, scrub, MappingStore, ScrubOptions};
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 #[derive(Debug, Parser)]
 #[command(name = "veilpaste")]
 #[command(version)]
@@ -38,6 +41,18 @@ enum Command {
     },
     Explain {
         input: PathBuf,
+    },
+    Map {
+        #[command(subcommand)]
+        command: MapCommand,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum MapCommand {
+    Inspect {
+        #[arg(long)]
+        map: PathBuf,
     },
 }
 
@@ -77,9 +92,7 @@ fn run() -> Result<i32> {
                     })?;
                 }
                 let json = serde_json::to_string_pretty(&result.mapping_store())?;
-                fs::write(&map_path, json).with_context(|| {
-                    format!("failed to write mapping file {}", map_path.display())
-                })?;
+                write_mapping_file(&map_path, &json)?;
             }
             write_stdout(&result.output);
             Ok(0)
@@ -130,7 +143,41 @@ fn run() -> Result<i32> {
             }
             Ok(0)
         }
+        Some(Command::Map {
+            command: MapCommand::Inspect { map },
+        }) => {
+            let map_text = fs::read_to_string(&map)
+                .with_context(|| format!("failed to read mapping file {}", map.display()))?;
+            let mapping: MappingStore = serde_json::from_str(&map_text)
+                .with_context(|| format!("failed to parse mapping file {}", map.display()))?;
+            for entry in mapping.entries {
+                println!("{}  {:?}", entry.placeholder, entry.kind);
+            }
+            Ok(0)
+        }
     }
+}
+
+fn write_mapping_file(path: &Path, json: &str) -> Result<()> {
+    fs::write(path, json)
+        .with_context(|| format!("failed to write mapping file {}", path.display()))?;
+    set_mapping_permissions(path)?;
+    Ok(())
+}
+
+#[cfg(unix)]
+fn set_mapping_permissions(path: &Path) -> Result<()> {
+    fs::set_permissions(path, fs::Permissions::from_mode(0o600)).with_context(|| {
+        format!(
+            "failed to restrict mapping file permissions {}",
+            path.display()
+        )
+    })
+}
+
+#[cfg(not(unix))]
+fn set_mapping_permissions(_path: &Path) -> Result<()> {
+    Ok(())
 }
 
 fn read_input(path: Option<&PathBuf>) -> Result<String> {
@@ -159,7 +206,7 @@ fn warn_if_mapping_is_not_ignored(map_path: &Path, quiet: bool) {
     }
 
     eprintln!(
-        "WARNING: mapping file contains original secrets. Do not commit it. Add .veilpaste/ to .gitignore."
+        "WARNING: mapping file contains live secrets. Do not commit it. Add .veilpaste/ to .gitignore."
     );
 }
 

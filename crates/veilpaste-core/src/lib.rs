@@ -1,6 +1,7 @@
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Finding {
@@ -20,6 +21,8 @@ pub struct ByteSpan {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SecretKind {
     BearerToken,
+    BasicAuth,
+    ApiKeyHeader,
     Jwt,
     CookieValue,
     OpenAiKey,
@@ -27,6 +30,16 @@ pub enum SecretKind {
     GithubToken,
     StripeKey,
     EnvValue,
+    DatabaseUrl,
+    RedisUrl,
+    MongoUri,
+    SentryDsn,
+    WebhookUrl,
+    UrlUserInfo,
+    PemPrivateKey,
+    NpmToken,
+    PypircSecret,
+    DockerAuth,
     UrlQuerySecret,
     HighEntropyToken,
 }
@@ -59,6 +72,10 @@ pub struct MappingEntry {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct MappingStore {
     pub version: u8,
+    #[serde(default)]
+    pub session_id: String,
+    #[serde(default)]
+    pub created_at: String,
     pub entries: Vec<MappingEntry>,
 }
 
@@ -79,6 +96,8 @@ impl ScrubResult {
     pub fn mapping_store(&self) -> MappingStore {
         MappingStore {
             version: 1,
+            session_id: new_session_id(),
+            created_at: current_unix_timestamp().to_string(),
             entries: self.mappings.clone(),
         }
     }
@@ -126,9 +145,40 @@ pub fn restore(input: &str, mapping: &MappingStore) -> Result<String, VeilPasteE
 
     let mut output = input.to_owned();
     for entry in &mapping.entries {
-        output = output.replace(&entry.placeholder, &entry.original);
+        if is_valid_placeholder(&entry.placeholder) {
+            output = output.replace(&entry.placeholder, &entry.original);
+        }
     }
     Ok(output)
+}
+
+fn new_session_id() -> String {
+    format!("session-{}", current_unix_timestamp())
+}
+
+fn current_unix_timestamp() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0)
+}
+
+fn is_valid_placeholder(placeholder: &str) -> bool {
+    let Some(body) = placeholder
+        .strip_prefix('[')
+        .and_then(|value| value.strip_suffix(']'))
+    else {
+        return false;
+    };
+    let Some((prefix, count)) = body.rsplit_once('_') else {
+        return false;
+    };
+    !prefix.is_empty()
+        && !count.is_empty()
+        && prefix
+            .chars()
+            .all(|ch| ch.is_ascii_uppercase() || ch.is_ascii_digit() || ch == '_')
+        && count.chars().all(|ch| ch.is_ascii_digit())
 }
 
 #[derive(Debug, Clone)]
@@ -169,6 +219,8 @@ impl SecretKind {
     fn placeholder_prefix(self) -> &'static str {
         match self {
             SecretKind::BearerToken => "BEARER_TOKEN",
+            SecretKind::BasicAuth => "BASIC_AUTH",
+            SecretKind::ApiKeyHeader => "API_KEY_HEADER",
             SecretKind::Jwt => "JWT",
             SecretKind::CookieValue => "COOKIE",
             SecretKind::OpenAiKey => "OPENAI_KEY",
@@ -176,6 +228,16 @@ impl SecretKind {
             SecretKind::GithubToken => "GITHUB_TOKEN",
             SecretKind::StripeKey => "STRIPE_KEY",
             SecretKind::EnvValue => "ENV_SECRET",
+            SecretKind::DatabaseUrl => "DATABASE_URL",
+            SecretKind::RedisUrl => "REDIS_URL",
+            SecretKind::MongoUri => "MONGO_URI",
+            SecretKind::SentryDsn => "SENTRY_DSN",
+            SecretKind::WebhookUrl => "WEBHOOK_URL",
+            SecretKind::UrlUserInfo => "URL_USERINFO",
+            SecretKind::PemPrivateKey => "PEM_PRIVATE_KEY",
+            SecretKind::NpmToken => "NPM_TOKEN",
+            SecretKind::PypircSecret => "PYPIRC_SECRET",
+            SecretKind::DockerAuth => "DOCKER_AUTH",
             SecretKind::UrlQuerySecret => "URL_TOKEN",
             SecretKind::HighEntropyToken => "HIGH_ENTROPY",
         }
@@ -185,10 +247,17 @@ impl SecretKind {
 fn detect_all(input: &str) -> Vec<Finding> {
     let mut findings = Vec::new();
     findings.extend(detect_bearer(input));
+    findings.extend(detect_basic_auth(input));
+    findings.extend(detect_api_key_headers(input));
     findings.extend(detect_cookie_values(input));
+    findings.extend(detect_service_urls(input));
     findings.extend(detect_env_values(input));
+    findings.extend(detect_url_userinfo(input));
     findings.extend(detect_url_query_secrets(input));
     findings.extend(detect_known_secrets(input));
+    findings.extend(detect_pem_private_keys(input));
+    findings.extend(detect_package_credentials(input));
+    findings.extend(detect_docker_auth(input));
     findings.extend(detect_jwt(input));
     findings.extend(detect_entropy_context(input));
     findings
@@ -300,6 +369,42 @@ fn detect_bearer(input: &str) -> Vec<Finding> {
         .collect()
 }
 
+fn detect_basic_auth(input: &str) -> Vec<Finding> {
+    let regex = Regex::new(r"(?i)Authorization\s*:\s*Basic\s+([A-Za-z0-9+/=]{8,})").unwrap();
+    regex
+        .captures_iter(input)
+        .filter_map(|captures| {
+            finding_from_capture(
+                input,
+                &captures,
+                1,
+                SecretKind::BasicAuth,
+                DetectorSource::HeaderDetector,
+                Confidence::High,
+            )
+        })
+        .collect()
+}
+
+fn detect_api_key_headers(input: &str) -> Vec<Finding> {
+    let regex =
+        Regex::new(r"(?i)\b(?:X-Api-Key|X-Auth-Token|Api-Key)\s*[:：]\s*([A-Za-z0-9._~+/=:-]{8,})")
+            .unwrap();
+    regex
+        .captures_iter(input)
+        .filter_map(|captures| {
+            finding_from_capture(
+                input,
+                &captures,
+                1,
+                SecretKind::ApiKeyHeader,
+                DetectorSource::HeaderDetector,
+                Confidence::High,
+            )
+        })
+        .collect()
+}
+
 fn detect_cookie_values(input: &str) -> Vec<Finding> {
     let mut findings = Vec::new();
     let mut offset = 0;
@@ -314,7 +419,9 @@ fn detect_cookie_values(input: &str) -> Vec<Finding> {
                     let key = part[..eq_idx].trim();
                     let raw_value = &part[eq_idx + 1..];
                     let leading_ws = raw_value.len() - raw_value.trim_start().len();
-                    let trimmed = trim_secret_value(raw_value);
+                    let trimmed = raw_value
+                        .trim()
+                        .trim_end_matches(['\'', '"', '`', ')', ']', '}']);
                     if should_redact_cookie_value(key, trimmed) {
                         let start = cookie_base + part_offset + eq_idx + 1 + leading_ws;
                         let end = start + trimmed.len();
@@ -363,7 +470,7 @@ fn detect_env_values(input: &str) -> Vec<Finding> {
                 let raw_value = line[eq_idx + 1..].trim_end_matches(['\n', '\r']);
                 let leading_ws = raw_value.len() - raw_value.trim_start().len();
                 let value = raw_value.trim();
-                if !value.is_empty() {
+                if !value.is_empty() && !value.contains("-----BEGIN") {
                     let start = offset + eq_idx + 1 + leading_ws;
                     let end = start + value.len();
                     findings.push(make_finding(
@@ -382,6 +489,92 @@ fn detect_env_values(input: &str) -> Vec<Finding> {
     findings
 }
 
+fn detect_service_urls(input: &str) -> Vec<Finding> {
+    let regex = Regex::new(
+        r#"(?i)\b(DATABASE_URL|POSTGRES_URL|MYSQL_URL|REDIS_URL|MONGO_URI|SENTRY_DSN|WEBHOOK_URL)\s*=\s*([^\s'"`)\]}<>,]+)"#,
+    )
+    .unwrap();
+    let mut findings = Vec::new();
+    let mut offset = 0;
+    for line in input.split_inclusive('\n') {
+        let trimmed_start = line.trim_start();
+        if trimmed_start.starts_with('#') {
+            offset += line.len();
+            continue;
+        }
+        for captures in regex.captures_iter(line) {
+            let Some(key_match) = captures.get(1) else {
+                continue;
+            };
+            let Some(value_match) = captures.get(2) else {
+                continue;
+            };
+            let key = key_match.as_str();
+            let value = trim_secret_value(value_match.as_str());
+            if let Some(kind) = service_url_kind(key, value) {
+                let start = offset + value_match.start();
+                let end = start + value.len();
+                findings.push(make_finding(
+                    input,
+                    start,
+                    end,
+                    kind,
+                    DetectorSource::EnvDetector,
+                    Confidence::High,
+                ));
+            }
+        }
+        offset += line.len();
+    }
+    findings
+}
+
+fn service_url_kind(key: &str, value: &str) -> Option<SecretKind> {
+    let key = key.trim().to_ascii_uppercase();
+    if value.is_empty() {
+        return None;
+    }
+
+    match key.as_str() {
+        "DATABASE_URL" | "POSTGRES_URL" | "MYSQL_URL"
+            if has_url_scheme(value, &["postgres://", "postgresql://", "mysql://"]) =>
+        {
+            Some(SecretKind::DatabaseUrl)
+        }
+        "REDIS_URL" if has_url_scheme(value, &["redis://", "rediss://"]) => {
+            Some(SecretKind::RedisUrl)
+        }
+        "MONGO_URI" if has_url_scheme(value, &["mongodb://", "mongodb+srv://"]) => {
+            Some(SecretKind::MongoUri)
+        }
+        "SENTRY_DSN" if value.starts_with("https://") && value.contains('@') => {
+            Some(SecretKind::SentryDsn)
+        }
+        "WEBHOOK_URL" if is_known_secret_webhook(value) => Some(SecretKind::WebhookUrl),
+        _ => None,
+    }
+}
+
+fn has_url_scheme(value: &str, schemes: &[&str]) -> bool {
+    let lower = value.to_ascii_lowercase();
+    schemes.iter().any(|scheme| lower.starts_with(scheme))
+}
+
+fn is_known_secret_webhook(value: &str) -> bool {
+    let lower = value.to_ascii_lowercase();
+    lower.starts_with("https://hooks.slack.com/")
+        || lower.starts_with("https://discord.com/api/webhooks/")
+        || lower.starts_with("https://discordapp.com/api/webhooks/")
+}
+
+fn trim_secret_value(value: &str) -> &str {
+    value.trim().trim_end_matches(is_secret_delimiter)
+}
+
+fn is_secret_delimiter(ch: char) -> bool {
+    matches!(ch, '\'' | '"' | '`' | ')' | ']' | '}' | '<' | '>' | ',')
+}
+
 fn is_sensitive_key(key: &str) -> bool {
     let upper = key.to_ascii_uppercase();
     ["KEY", "TOKEN", "SECRET", "PASSWORD"]
@@ -390,10 +583,9 @@ fn is_sensitive_key(key: &str) -> bool {
 }
 
 fn detect_url_query_secrets(input: &str) -> Vec<Finding> {
-    let regex = Regex::new(
-        r#"([?&])([A-Za-z0-9_-]*(?:token|key|secret|password)[A-Za-z0-9_-]*)=([^&\s'"`)\]\}<>,]+)"#,
-    )
-    .unwrap();
+    let regex =
+        Regex::new(r"([?&])([A-Za-z0-9_-]*(?:token|key|secret|password)[A-Za-z0-9_-]*)=([^&\s]+)")
+            .unwrap();
     regex
         .captures_iter(input)
         .filter_map(|captures| {
@@ -409,12 +601,21 @@ fn detect_url_query_secrets(input: &str) -> Vec<Finding> {
         .collect()
 }
 
-fn trim_secret_value(value: &str) -> &str {
-    value.trim().trim_end_matches(is_secret_delimiter)
-}
-
-fn is_secret_delimiter(ch: char) -> bool {
-    matches!(ch, '\'' | '"' | '`' | ')' | ']' | '}' | '<' | '>' | ',')
+fn detect_url_userinfo(input: &str) -> Vec<Finding> {
+    let regex = Regex::new(r#"https?://([^/\s'"`@]+:[^@\s'"`/]+)@"#).unwrap();
+    regex
+        .captures_iter(input)
+        .filter_map(|captures| {
+            finding_from_capture(
+                input,
+                &captures,
+                1,
+                SecretKind::UrlUserInfo,
+                DetectorSource::UrlQueryDetector,
+                Confidence::High,
+            )
+        })
+        .collect()
 }
 
 fn detect_known_secrets(input: &str) -> Vec<Finding> {
@@ -443,6 +644,70 @@ fn detect_known_secrets(input: &str) -> Vec<Finding> {
         }));
     }
     findings
+}
+
+fn detect_pem_private_keys(input: &str) -> Vec<Finding> {
+    let regex =
+        Regex::new(r"(?s)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----")
+            .unwrap();
+    regex
+        .find_iter(input)
+        .map(|matched| {
+            make_finding(
+                input,
+                matched.start(),
+                matched.end(),
+                SecretKind::PemPrivateKey,
+                DetectorSource::KnownSecretDetector,
+                Confidence::High,
+            )
+        })
+        .collect()
+}
+
+fn detect_package_credentials(input: &str) -> Vec<Finding> {
+    let mut findings = Vec::new();
+    let npm_regex = Regex::new(r"(?m)_authToken\s*=\s*([^\s]+)").unwrap();
+    findings.extend(npm_regex.captures_iter(input).filter_map(|captures| {
+        finding_from_capture(
+            input,
+            &captures,
+            1,
+            SecretKind::NpmToken,
+            DetectorSource::KnownSecretDetector,
+            Confidence::High,
+        )
+    }));
+
+    let pypirc_regex = Regex::new(r"(?mi)^\s*(?:password|token)\s*=\s*([^\s]+)").unwrap();
+    findings.extend(pypirc_regex.captures_iter(input).filter_map(|captures| {
+        finding_from_capture(
+            input,
+            &captures,
+            1,
+            SecretKind::PypircSecret,
+            DetectorSource::KnownSecretDetector,
+            Confidence::High,
+        )
+    }));
+    findings
+}
+
+fn detect_docker_auth(input: &str) -> Vec<Finding> {
+    let regex = Regex::new(r#""auth"\s*:\s*"([^"]{8,})""#).unwrap();
+    regex
+        .captures_iter(input)
+        .filter_map(|captures| {
+            finding_from_capture(
+                input,
+                &captures,
+                1,
+                SecretKind::DockerAuth,
+                DetectorSource::KnownSecretDetector,
+                Confidence::High,
+            )
+        })
+        .collect()
 }
 
 fn detect_jwt(input: &str) -> Vec<Finding> {

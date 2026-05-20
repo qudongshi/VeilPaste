@@ -5,6 +5,9 @@ use std::io::Write;
 use std::process::Command as StdCommand;
 use tempfile::NamedTempFile;
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 #[test]
 fn default_stdin_scrubs_to_stdout() {
     let mut cmd = Command::cargo_bin("veilpaste").expect("binary exists");
@@ -92,6 +95,76 @@ fn scrub_writes_mapping_and_restore_uses_it() {
 }
 
 #[test]
+fn scrub_writes_mapping_metadata_and_restrictive_permissions() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let input_path = dir.path().join("input.env");
+    let map_path = dir.path().join(".veilpaste/session.json");
+    fs::write(
+        &input_path,
+        "OPENAI_API_KEY=sk-proj-abcdefghijklmnopqrstuvwxyz",
+    )
+    .unwrap();
+
+    let mut cmd = Command::cargo_bin("veilpaste").expect("binary exists");
+    cmd.args([
+        "scrub",
+        input_path.to_str().unwrap(),
+        "--map",
+        map_path.to_str().unwrap(),
+    ])
+    .assert()
+    .success();
+
+    let map_text = fs::read_to_string(&map_path).expect("mapping should exist");
+    let map_json: serde_json::Value = serde_json::from_str(&map_text).expect("mapping json");
+    assert_eq!(map_json["version"], 1);
+    assert!(map_json["session_id"]
+        .as_str()
+        .is_some_and(|v| !v.is_empty()));
+    assert!(map_json["created_at"]
+        .as_str()
+        .is_some_and(|v| !v.is_empty()));
+
+    #[cfg(unix)]
+    assert_eq!(
+        fs::metadata(&map_path).unwrap().permissions().mode() & 0o777,
+        0o600
+    );
+}
+
+#[test]
+fn map_inspect_hides_original_secret_values() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let input_path = dir.path().join("input.env");
+    let map_path = dir.path().join("session.json");
+    fs::write(
+        &input_path,
+        "OPENAI_API_KEY=sk-proj-abcdefghijklmnopqrstuvwxyz",
+    )
+    .unwrap();
+
+    let mut scrub = Command::cargo_bin("veilpaste").expect("binary exists");
+    scrub
+        .args([
+            "scrub",
+            input_path.to_str().unwrap(),
+            "--map",
+            map_path.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    let mut inspect = Command::cargo_bin("veilpaste").expect("binary exists");
+    inspect
+        .args(["map", "inspect", "--map", map_path.to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[OPENAI_KEY_1]"))
+        .stdout(predicate::str::contains("OpenAiKey"))
+        .stdout(predicate::str::contains("sk-proj-abcdefghijklmnopqrstuvwxyz").not());
+}
+
+#[test]
 fn quiet_flag_is_accepted_for_pipeline_use() {
     let mut cmd = Command::cargo_bin("veilpaste").expect("binary exists");
 
@@ -129,7 +202,7 @@ fn warns_when_mapping_file_is_inside_git_repo_without_ignore_rule() {
         .assert()
         .success()
         .stderr(predicate::str::contains(
-            "mapping file contains original secrets",
+            "mapping file contains live secrets",
         ))
         .stderr(predicate::str::contains(".veilpaste/"));
 }

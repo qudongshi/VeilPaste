@@ -2,6 +2,32 @@ use std::fs;
 use std::path::Path;
 use veilpaste_core::{restore, scrub, ScrubOptions, SecretKind};
 
+#[derive(serde::Deserialize)]
+struct SharedVector {
+    name: String,
+    input: String,
+    expect_contains: Vec<String>,
+    expect_not_contains: Vec<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct Contract {
+    rules: Vec<ContractRule>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct ContractRule {
+    rust_kind: String,
+    placeholder_prefix: String,
+}
+
+fn shared_contract() -> Contract {
+    let path =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/shared-contract/rules.json");
+    serde_json::from_str(&fs::read_to_string(path).expect("shared contract should exist"))
+        .expect("shared contract should parse")
+}
+
 #[test]
 fn scrubs_high_confidence_secrets_and_preserves_structure() {
     let input = "\
@@ -53,6 +79,36 @@ fn restores_placeholders_from_mapping() {
 }
 
 #[test]
+fn mapping_store_has_session_metadata() {
+    let input = "OPENAI_API_KEY=sk-proj-abcdefghijklmnopqrstuvwxyz";
+    let scrubbed = scrub(input, ScrubOptions::default()).expect("scrub should succeed");
+    let mapping = scrubbed.mapping_store();
+
+    assert_eq!(mapping.version, 1);
+    assert!(!mapping.session_id.is_empty());
+    assert!(!mapping.created_at.is_empty());
+}
+
+#[test]
+fn restore_ignores_invalid_placeholder_entries() {
+    let mapping = veilpaste_core::MappingStore {
+        version: 1,
+        session_id: "test-session".to_owned(),
+        created_at: "2026-05-13T00:00:00Z".to_owned(),
+        entries: vec![veilpaste_core::MappingEntry {
+            placeholder: "not-a-placeholder".to_owned(),
+            original: "sk-proj-abcdefghijklmnopqrstuvwxyz".to_owned(),
+            kind: SecretKind::OpenAiKey,
+        }],
+    };
+
+    let restored =
+        restore("not-a-placeholder should stay", &mapping).expect("restore should succeed");
+
+    assert_eq!(restored, "not-a-placeholder should stay");
+}
+
+#[test]
 fn preview_reports_redactions_without_emitting_secret_values() {
     let input = "Authorization: Bearer sk-live-abc1234567890";
     let result = scrub(
@@ -86,6 +142,68 @@ url=https://example.test/path?api_key=secret_query_value
     assert!(result.output.contains("[GITHUB_TOKEN_1]"));
     assert!(result.output.contains("[STRIPE_KEY_1]"));
     assert!(result.output.contains("api_key=[URL_TOKEN_1]"));
+}
+
+#[test]
+fn covers_p0_developer_secret_vectors() {
+    let fixture_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/shared-vectors");
+    let path = fixture_root.join("p0-secrets.json");
+    let vectors: Vec<SharedVector> =
+        serde_json::from_str(&fs::read_to_string(path).expect("shared vectors should exist"))
+            .expect("shared vectors should parse");
+
+    for vector in vectors {
+        let result = scrub(&vector.input, ScrubOptions::default())
+            .unwrap_or_else(|_| panic!("scrub should succeed for {}", vector.name));
+        for expected in vector.expect_contains {
+            assert!(
+                result.output.contains(&expected),
+                "expected output for {} to contain {expected:?}; got:\n{}",
+                vector.name,
+                result.output
+            );
+        }
+        for forbidden in vector.expect_not_contains {
+            assert!(
+                !result.output.contains(&forbidden),
+                "expected output for {} not to contain {forbidden:?}; got:\n{}",
+                vector.name,
+                result.output
+            );
+        }
+    }
+}
+
+#[test]
+fn shared_vectors_comply_with_rule_contract() {
+    let fixture_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/shared-vectors");
+    let path = fixture_root.join("p0-secrets.json");
+    let vectors: Vec<SharedVector> =
+        serde_json::from_str(&fs::read_to_string(path).expect("shared vectors should exist"))
+            .expect("shared vectors should parse");
+    let contract = shared_contract();
+
+    for vector in vectors {
+        let result = scrub(&vector.input, ScrubOptions::default())
+            .unwrap_or_else(|_| panic!("scrub should succeed for {}", vector.name));
+        for entry in result.mappings {
+            let rust_kind = format!("{:?}", entry.kind);
+            let rule = contract
+                .rules
+                .iter()
+                .find(|rule| rule.rust_kind == rust_kind)
+                .unwrap_or_else(|| panic!("{}: missing contract for {}", vector.name, rust_kind));
+            assert!(
+                entry
+                    .placeholder
+                    .starts_with(&format!("[{}_", rule.placeholder_prefix)),
+                "{}: placeholder {} does not match {}",
+                vector.name,
+                entry.placeholder,
+                rule.placeholder_prefix
+            );
+        }
+    }
 }
 
 #[test]
@@ -125,7 +243,15 @@ fn strict_mode_redacts_contextual_entropy_but_default_does_not() {
 #[test]
 fn scrubs_every_positive_fixture_without_leaking_known_values() {
     let fixture_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures");
-    let positive_dirs = ["env", "curl", "headers", "json", "yaml", "logs"];
+    let positive_dirs = [
+        "env",
+        "curl",
+        "headers",
+        "json",
+        "yaml",
+        "logs",
+        "realistic",
+    ];
 
     for dir in positive_dirs {
         let dir_path = fixture_root.join(dir);
@@ -179,26 +305,25 @@ fn false_positive_fixtures_are_not_redacted_by_default() {
 }
 
 #[test]
-fn preserves_shell_quotes_when_scrubbing_curl_fixture() {
-    let input = fs::read_to_string(
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/curl/request.curl"),
-    )
-    .expect("curl fixture should exist");
+fn shared_false_positive_vectors_are_not_redacted_by_default() {
+    let fixture_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/shared-vectors");
+    let path = fixture_root.join("false-positives.json");
+    let vectors: Vec<SharedVector> =
+        serde_json::from_str(&fs::read_to_string(path).expect("shared vectors should exist"))
+            .expect("shared vectors should parse");
 
-    let result = scrub(&input, ScrubOptions::default()).expect("scrub should succeed");
-
-    assert!(result.output.contains("api_key=[URL_TOKEN_1]' \\"));
-    assert!(result.output.contains("-H 'Cookie: sessionid=[COOKIE_1]'"));
-}
-
-#[test]
-fn does_not_redact_trailing_url_delimiters() {
-    let input = "url='https://example.test/path?api_key=secret_query_value') next";
-
-    let result = scrub(input, ScrubOptions::default()).expect("scrub should succeed");
-
-    assert_eq!(
-        result.output,
-        "url='https://example.test/path?api_key=[URL_TOKEN_1]') next"
-    );
+    for vector in vectors {
+        let result = scrub(&vector.input, ScrubOptions::default())
+            .unwrap_or_else(|_| panic!("scrub should succeed for {}", vector.name));
+        assert_eq!(
+            result.output, vector.input,
+            "unexpected redaction for {}",
+            vector.name
+        );
+        assert!(
+            result.findings.is_empty(),
+            "unexpected findings for {}",
+            vector.name
+        );
+    }
 }

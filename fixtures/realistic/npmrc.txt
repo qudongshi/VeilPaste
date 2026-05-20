@@ -1,0 +1,2 @@
+//registry.npmjs.org/:_authToken=npm_secret_token_1234567890
+@example:registry=https://registry.npmjs.org/

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["version", "rules"],
+  "properties": {
+    "version": { "const": 1 },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "rust_kind",
+          "placeholder_prefix",
+          "severity",
+          "redaction_span",
+          "title_zh",
+          "risk_zh",
+          "title_en",
+          "risk_en",
+          "examples"
+        ],
+        "properties": {
+          "kind": { "type": "string", "pattern": "^[A-Z0-9_]+$" },
+          "rust_kind": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]+$" },
+          "placeholder_prefix": { "type": "string", "pattern": "^[A-Z0-9_]+$" },
+          "severity": { "enum": ["critical", "warning"] },
+          "redaction_span": {
+            "enum": [
+              "credential_value",
+              "full_value",
+              "url_userinfo",
+              "private_key_block",
+              "header_value",
+              "cookie_value",
+              "json_value",
+              "query_value"
+            ]
+          },
+          "title_zh": { "type": "string", "minLength": 1 },
+          "risk_zh": { "type": "string", "minLength": 1 },
+          "title_en": { "type": "string", "minLength": 1 },
+          "risk_en": { "type": "string", "minLength": 1 },
+          "examples": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

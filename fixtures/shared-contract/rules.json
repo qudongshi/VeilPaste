@@ -1,0 +1,271 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "kind": "BEARER_TOKEN",
+      "rust_kind": "BearerToken",
+      "placeholder_prefix": "BEARER_TOKEN",
+      "severity": "critical",
+      "redaction_span": "credential_value",
+      "title_zh": "Bearer 访问令牌",
+      "risk_zh": "会泄漏账号或服务访问权限。",
+      "examples": [
+        "Authorization: Bearer [TOKEN_VALUE]"
+      ],
+      "title_en": "Bearer access token",
+      "risk_en": "May leak account or service access."
+    },
+    {
+      "kind": "BASIC_AUTH",
+      "rust_kind": "BasicAuth",
+      "placeholder_prefix": "BASIC_AUTH",
+      "severity": "critical",
+      "redaction_span": "credential_value",
+      "title_zh": "Basic Authorization 凭证",
+      "risk_zh": "会泄漏用户名密码或等价凭证。",
+      "examples": [
+        "Authorization: Basic [TOKEN_VALUE]"
+      ],
+      "title_en": "Basic Authorization credential",
+      "risk_en": "May leak username/password or equivalent credentials."
+    },
+    {
+      "kind": "API_KEY_HEADER",
+      "rust_kind": "ApiKeyHeader",
+      "placeholder_prefix": "API_KEY_HEADER",
+      "severity": "critical",
+      "redaction_span": "header_value",
+      "title_zh": "API key 请求头",
+      "risk_zh": "会泄漏接口调用密钥。",
+      "examples": [
+        "X-Api-Key: [TOKEN_VALUE]"
+      ],
+      "title_en": "API key header",
+      "risk_en": "May leak an API access key."
+    },
+    {
+      "kind": "COOKIE",
+      "rust_kind": "CookieValue",
+      "placeholder_prefix": "COOKIE",
+      "severity": "critical",
+      "redaction_span": "cookie_value",
+      "title_zh": "Cookie 会话值",
+      "risk_zh": "会泄漏登录会话或身份状态。",
+      "examples": [
+        "Cookie: sessionid=[SESSION_VALUE]"
+      ],
+      "title_en": "Cookie session value",
+      "risk_en": "May leak login session or identity state."
+    },
+    {
+      "kind": "OPENAI_KEY",
+      "rust_kind": "OpenAiKey",
+      "placeholder_prefix": "OPENAI_KEY",
+      "severity": "critical",
+      "redaction_span": "credential_value",
+      "title_zh": "OpenAI Key",
+      "risk_zh": "会泄漏 AI 服务访问额度或项目权限。",
+      "examples": [
+        "OPENAI_API_KEY=[TOKEN_VALUE]"
+      ],
+      "title_en": "OpenAI key",
+      "risk_en": "May leak AI service quota or project access."
+    },
+    {
+      "kind": "AWS_KEY",
+      "rust_kind": "AwsAccessKey",
+      "placeholder_prefix": "AWS_KEY",
+      "severity": "critical",
+      "redaction_span": "credential_value",
+      "title_zh": "AWS Access Key",
+      "risk_zh": "会泄漏云资源访问权限。",
+      "examples": [
+        "AWS_ACCESS_KEY_ID=[TOKEN_VALUE]"
+      ],
+      "title_en": "AWS Access Key",
+      "risk_en": "May leak cloud resource access."
+    },
+    {
+      "kind": "GITHUB_TOKEN",
+      "rust_kind": "GithubToken",
+      "placeholder_prefix": "GITHUB_TOKEN",
+      "severity": "critical",
+      "redaction_span": "credential_value",
+      "title_zh": "GitHub Token",
+      "risk_zh": "会泄漏代码仓库或自动化权限。",
+      "examples": [
+        "GITHUB_TOKEN=[TOKEN_VALUE]"
+      ],
+      "title_en": "GitHub token",
+      "risk_en": "May leak repository or automation access."
+    },
+    {
+      "kind": "STRIPE_KEY",
+      "rust_kind": "StripeKey",
+      "placeholder_prefix": "STRIPE_KEY",
+      "severity": "critical",
+      "redaction_span": "credential_value",
+      "title_zh": "Stripe Key",
+      "risk_zh": "会泄漏支付服务访问权限。",
+      "examples": [
+        "STRIPE_SECRET_KEY=[TOKEN_VALUE]"
+      ],
+      "title_en": "Stripe key",
+      "risk_en": "May leak payment service access."
+    },
+    {
+      "kind": "DATABASE_URL",
+      "rust_kind": "DatabaseUrl",
+      "placeholder_prefix": "DATABASE_URL",
+      "severity": "critical",
+      "redaction_span": "full_value",
+      "title_zh": "数据库连接串",
+      "risk_zh": "会泄漏服务地址、账号或密码。",
+      "examples": [
+        "DATABASE_URL=[DATABASE_URL]"
+      ],
+      "title_en": "Database connection string",
+      "risk_en": "May leak service host, username, or password."
+    },
+    {
+      "kind": "REDIS_URL",
+      "rust_kind": "RedisUrl",
+      "placeholder_prefix": "REDIS_URL",
+      "severity": "critical",
+      "redaction_span": "full_value",
+      "title_zh": "Redis 连接串",
+      "risk_zh": "会泄漏服务地址、账号或密码。",
+      "examples": [
+        "REDIS_URL=[REDIS_URL]"
+      ],
+      "title_en": "Redis connection string",
+      "risk_en": "May leak service host, username, or password."
+    },
+    {
+      "kind": "MONGO_URI",
+      "rust_kind": "MongoUri",
+      "placeholder_prefix": "MONGO_URI",
+      "severity": "critical",
+      "redaction_span": "full_value",
+      "title_zh": "MongoDB 连接串",
+      "risk_zh": "会泄漏服务地址、账号或密码。",
+      "examples": [
+        "MONGO_URI=[MONGO_URI]"
+      ],
+      "title_en": "MongoDB connection string",
+      "risk_en": "May leak service host, username, or password."
+    },
+    {
+      "kind": "SENTRY_DSN",
+      "rust_kind": "SentryDsn",
+      "placeholder_prefix": "SENTRY_DSN",
+      "severity": "warning",
+      "redaction_span": "full_value",
+      "title_zh": "Sentry DSN",
+      "risk_zh": "可能暴露项目上报入口。",
+      "examples": [
+        "SENTRY_DSN=[SENTRY_DSN]"
+      ],
+      "title_en": "Sentry DSN",
+      "risk_en": "May expose a project event ingestion endpoint."
+    },
+    {
+      "kind": "WEBHOOK_URL",
+      "rust_kind": "WebhookUrl",
+      "placeholder_prefix": "WEBHOOK_URL",
+      "severity": "critical",
+      "redaction_span": "full_value",
+      "title_zh": "Webhook 地址",
+      "risk_zh": "会泄漏可直接触发外部服务的地址。",
+      "examples": [
+        "WEBHOOK_URL=[WEBHOOK_URL]"
+      ],
+      "title_en": "Webhook URL",
+      "risk_en": "May leak an endpoint that can trigger an external service."
+    },
+    {
+      "kind": "URL_USERINFO",
+      "rust_kind": "UrlUserInfo",
+      "placeholder_prefix": "URL_USERINFO",
+      "severity": "critical",
+      "redaction_span": "url_userinfo",
+      "title_zh": "URL 用户名密码",
+      "risk_zh": "会泄漏嵌在 URL 里的账号密码。",
+      "examples": [
+        "https://[URL_USERINFO]@host/path"
+      ],
+      "title_en": "URL username/password",
+      "risk_en": "May leak credentials embedded in a URL."
+    },
+    {
+      "kind": "PEM_PRIVATE_KEY",
+      "rust_kind": "PemPrivateKey",
+      "placeholder_prefix": "PEM_PRIVATE_KEY",
+      "severity": "critical",
+      "redaction_span": "private_key_block",
+      "title_zh": "PEM 私钥",
+      "risk_zh": "会泄漏可用于签名或登录的私钥。",
+      "examples": [
+        "-----BEGIN PRIVATE KEY-----"
+      ],
+      "title_en": "PEM private key",
+      "risk_en": "May leak a private key used for signing or login."
+    },
+    {
+      "kind": "NPM_TOKEN",
+      "rust_kind": "NpmToken",
+      "placeholder_prefix": "NPM_TOKEN",
+      "severity": "critical",
+      "redaction_span": "credential_value",
+      "title_zh": "npm token",
+      "risk_zh": "会泄漏包发布或镜像仓库凭证。",
+      "examples": [
+        "_authToken=[TOKEN_VALUE]"
+      ],
+      "title_en": "npm token",
+      "risk_en": "May leak package publishing or registry credentials."
+    },
+    {
+      "kind": "PYPIRC_SECRET",
+      "rust_kind": "PypircSecret",
+      "placeholder_prefix": "PYPIRC_SECRET",
+      "severity": "critical",
+      "redaction_span": "credential_value",
+      "title_zh": "PyPI 凭证",
+      "risk_zh": "会泄漏包发布或镜像仓库凭证。",
+      "examples": [
+        "password = [TOKEN_VALUE]"
+      ],
+      "title_en": "PyPI credential",
+      "risk_en": "May leak package publishing or registry credentials."
+    },
+    {
+      "kind": "DOCKER_AUTH",
+      "rust_kind": "DockerAuth",
+      "placeholder_prefix": "DOCKER_AUTH",
+      "severity": "critical",
+      "redaction_span": "json_value",
+      "title_zh": "Docker auth 凭证",
+      "risk_zh": "会泄漏包发布或镜像仓库凭证。",
+      "examples": [
+        "\"auth\":\"[TOKEN_VALUE]\""
+      ],
+      "title_en": "Docker auth credential",
+      "risk_en": "May leak package publishing or registry credentials."
+    },
+    {
+      "kind": "URL_TOKEN",
+      "rust_kind": "UrlQuerySecret",
+      "placeholder_prefix": "URL_TOKEN",
+      "severity": "critical",
+      "redaction_span": "query_value",
+      "title_zh": "URL 参数中的敏感值",
+      "risk_zh": "会泄漏请求里的密钥或访问口令。",
+      "examples": [
+        "?api_key=[TOKEN_VALUE]"
+      ],
+      "title_en": "Sensitive URL parameter",
+      "risk_en": "May leak keys or access tokens from the request."
+    }
+  ]
+}

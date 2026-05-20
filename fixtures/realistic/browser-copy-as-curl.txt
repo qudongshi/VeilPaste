@@ -1,0 +1,3 @@
+curl 'https://deploy:deploypass@example.test/api?debug=true' \
+  -H 'X-Api-Key: header-secret-value-12345' \
+  -H 'Authorization: Basic dXNlcjpwYXNzd29yZA=='

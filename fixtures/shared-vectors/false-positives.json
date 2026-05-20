@@ -1,0 +1,26 @@
+[
+  {
+    "name": "ordinary webhook endpoint",
+    "input": "WEBHOOK_URL=https://example.test/hooks/events\n",
+    "expect_contains": [],
+    "expect_not_contains": []
+  },
+  {
+    "name": "non-secret connection tuning",
+    "input": "DATABASE_POOL=10\nREDIS_TIMEOUT_MS=500\nMONGO_RETRY_WRITES=true\n",
+    "expect_contains": [],
+    "expect_not_contains": []
+  },
+  {
+    "name": "ordinary documentation url with user-like path",
+    "input": "docs=https://example.test/users/password-reset\n",
+    "expect_contains": [],
+    "expect_not_contains": []
+  },
+  {
+    "name": "chinese explanation without secret remains unchanged",
+    "input": "这个接口调用失败了，错误码是 401，但这里没有密钥。\n",
+    "expect_contains": [],
+    "expect_not_contains": []
+  }
+]
