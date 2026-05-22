@@ -262,8 +262,7 @@
     },
     en: {
       panelTitle: "Possible leak found. Paste paused.",
-      explanation:
-        "You can redact first, then continue pasting.",
+      explanation: "You can redact first, then continue pasting.",
       plainPaste: "Paste without redaction",
       redactOnce: "Redact once",
       alwaysRedact: "Always redact",
@@ -283,16 +282,16 @@
       closeAria: "Close notification",
     },
   };
-  const redactionCounts = new Map();
-  const autoRedactKeys = new Set();
   let autoRedactEnabled = false;
+  let autoRedactLoaded = false;
+  let autoRedactLoading = false;
+  const autoRedactWaiters = [];
 
-  globalThis.chrome?.storage?.local?.get({ autoRedactEnabled: false }, (settings) => {
-    autoRedactEnabled = settings.autoRedactEnabled === true;
-  });
+  loadAutoRedactSetting();
   globalThis.chrome?.storage?.local?.onChanged?.addListener((changes) => {
     if (changes.autoRedactEnabled) {
       autoRedactEnabled = changes.autoRedactEnabled.newValue === true;
+      autoRedactLoaded = true;
     }
   });
 
@@ -312,31 +311,25 @@
         }
 
         event.preventDefault();
-        const decisionKey = buildDecisionKey(text, result.findings);
-        if (autoRedactEnabled && autoRedactKeys.has(decisionKey)) {
-          replaceTargetText(target, result.text);
-          showRedactionCompleteToast(text, result.findings, true);
-          return;
-        }
+        loadAutoRedactSetting((enabled) => {
+          if (enabled) {
+            replaceTargetText(target, result.text);
+            showRedactionCompleteToast(text, result.findings, true);
+            return;
+          }
 
-        const redactionCount = redactionCounts.get(decisionKey) ?? 0;
-        showVeilPastePanel({
-          inputText: text,
-          findings: result.findings,
-          redactedText: result.text,
-          showAlwaysRedact: autoRedactEnabled && redactionCount > 0,
-          onPlainPaste: () => replaceTargetText(target, text),
-          onRedactOnce: () => {
-            redactionCounts.set(decisionKey, redactionCount + 1);
-            replaceTargetText(target, result.text);
-            showRedactionCompleteToast(text, result.findings, false);
-          },
-          onAlwaysRedact: () => {
-            redactionCounts.set(decisionKey, redactionCount + 1);
-            autoRedactKeys.add(decisionKey);
-            replaceTargetText(target, result.text);
-            showRedactionCompleteToast(text, result.findings, false);
-          },
+          showVeilPastePanel({
+            inputText: text,
+            findings: result.findings,
+            redactedText: result.text,
+            showAlwaysRedact: false,
+            onPlainPaste: () => replaceTargetText(target, text),
+            onRedactOnce: () => {
+              replaceTargetText(target, result.text);
+              showRedactionCompleteToast(text, result.findings, false);
+            },
+            onAlwaysRedact: () => {},
+          });
         });
       } catch (error) {
         console.error("[VeilPaste] paste handling failed", error);
@@ -344,6 +337,40 @@
     },
     true,
   );
+
+  function loadAutoRedactSetting(callback = () => {}) {
+    if (autoRedactLoaded) {
+      callback(autoRedactEnabled);
+      return;
+    }
+
+    autoRedactWaiters.push(callback);
+    if (autoRedactLoading) {
+      return;
+    }
+    autoRedactLoading = true;
+
+    const storage = globalThis.chrome?.storage?.local;
+    if (!storage?.get) {
+      autoRedactLoaded = true;
+      autoRedactLoading = false;
+      flushAutoRedactWaiters();
+      return;
+    }
+
+    storage.get({ autoRedactEnabled: false }, (settings) => {
+      autoRedactEnabled = settings.autoRedactEnabled === true;
+      autoRedactLoaded = true;
+      autoRedactLoading = false;
+      flushAutoRedactWaiters();
+    });
+  }
+
+  function flushAutoRedactWaiters() {
+    for (const callback of autoRedactWaiters.splice(0)) {
+      callback(autoRedactEnabled);
+    }
+  }
 
   function detectAndRedact(input) {
     const findings = [];
@@ -395,36 +422,6 @@
       }, []);
   }
 
-  function buildDecisionKey(inputText, findings) {
-    const origin = globalThis.location?.origin ?? "unknown-origin";
-    const fingerprint = findings
-      .map((finding) => `${finding.kind}:${riskFieldName(inputText, finding)}`)
-      .sort()
-      .join("|");
-    return `${origin}::${fingerprint}`;
-  }
-
-  function riskFieldName(inputText, finding) {
-    const prefix = inputText.slice(0, finding.start);
-    if (finding.kind === "URL_TOKEN") {
-      return prefix.match(/[?&]([^=&\s'"`)\]}<>,]+)=$/i)?.[1] ?? "";
-    }
-    if (finding.kind === "COOKIE") {
-      return prefix.match(/(?:^|[;\s])([^=;\s]+)=$/i)?.[1] ?? "";
-    }
-    if (finding.kind === "API_KEY_HEADER") {
-      return lineForFinding(inputText, finding).match(/^\s*([^:\n]+)\s*:/)?.[1] ?? "";
-    }
-    return "";
-  }
-
-  function lineForFinding(inputText, finding) {
-    const lineStart = inputText.lastIndexOf("\n", finding.start - 1) + 1;
-    const nextLine = inputText.indexOf("\n", finding.end);
-    const lineEnd = nextLine === -1 ? inputText.length : nextLine;
-    return inputText.slice(lineStart, lineEnd);
-  }
-
   function showVeilPastePanel({
     inputText,
     findings,
@@ -434,71 +431,67 @@
     onAlwaysRedact,
   }) {
     document.getElementById("veilpaste-panel")?.remove();
+    ensureVeilPasteStyles();
     const locale = currentLocale();
     const copy = messages[locale];
 
     const panel = document.createElement("div");
     panel.id = "veilpaste-panel";
-    panel.style.cssText = [
-      "position:fixed",
-      "right:20px",
-      "bottom:20px",
-      "z-index:2147483647",
-      "width:min(400px, calc(100vw - 40px))",
-      "padding:16px",
-      "border:1px solid #d8cdbb",
-      "border-radius:18px",
-      "background:linear-gradient(145deg,#fffdf7,#fff8ee)",
-      "color:#111827",
-      "font:14px/1.45 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif",
-      "box-shadow:0 24px 70px rgba(100,73,36,.20)",
-    ].join(";");
+    panel.className = "veil-prompt";
 
     const header = document.createElement("div");
-    header.style.cssText = [
-      "display:flex",
-      "align-items:center",
-      "justify-content:space-between",
-      "gap:10px",
-    ].join(";");
+    header.className = "veil-prompt-h";
 
-    const title = document.createElement("strong");
+    const statusIcon = document.createElement("span");
+    statusIcon.className = "status";
+    statusIcon.textContent = "!";
+
+    const titleWrap = document.createElement("div");
+    const title = document.createElement("div");
+    title.className = "title";
     title.textContent = copy.panelTitle;
-    title.style.cssText = "font-size:18px;letter-spacing:-.02em";
-
-    const infoButton = createInfoButton();
-    infoButton.addEventListener("click", () => {
-      openVeilPasteOptions();
-    });
-    header.append(title, infoButton);
-
-    const explanation = document.createElement("p");
-    explanation.style.cssText = "margin:10px 0 14px;color:#334155";
+    const explanation = document.createElement("div");
+    explanation.className = "sub";
     explanation.textContent = copy.explanation;
+    titleWrap.append(title, explanation);
 
-    const riskList = document.createElement("div");
-    riskList.style.cssText = "display:grid;gap:10px;margin:0 0 16px";
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.className = "close";
+    closeButton.textContent = "×";
+    closeButton.setAttribute("aria-label", copy.closeAria);
+    header.append(statusIcon, titleWrap, closeButton);
+
+    const riskList = document.createElement("ul");
+    riskList.className = "veil-risks";
     for (const risk of riskItems(inputText, findings, locale)) {
       riskList.append(createRiskRow(risk, locale));
     }
 
     const plainButton = createPanelButton(copy.plainPaste);
     const redactOnceButton = createPanelButton(copy.redactOnce, true);
-    const alwaysRedactButton = createPanelButton(copy.alwaysRedact, true);
+    const alwaysRedactButton = createPanelButton(copy.alwaysRedact, false, "always");
     const buttonRow = document.createElement("div");
-    buttonRow.style.cssText = [
-      "display:flex",
-      "gap:8px",
-      "flex-wrap:wrap",
-      "align-items:center",
-      "justify-content:flex-end",
-    ].join(";");
-    buttonRow.append(plainButton, redactOnceButton);
+    buttonRow.className = "veil-actions";
+    const firstRow = document.createElement("div");
+    firstRow.className = "row";
+    firstRow.append(plainButton, redactOnceButton);
+    buttonRow.append(firstRow);
     if (showAlwaysRedact) {
       buttonRow.append(alwaysRedactButton);
     }
 
-    panel.append(header, explanation, riskList, buttonRow);
+    const footer = document.createElement("div");
+    footer.className = "veil-foot";
+    const boundary = document.createElement("span");
+    boundary.textContent = locale === "zh" ? "本地处理，不上传内容" : "Local processing. No upload.";
+    const infoButton = createInfoButton();
+    infoButton.addEventListener("click", () => {
+      openVeilPasteOptions();
+    });
+    footer.append(boundary, infoButton);
+
+    panel.append(header, riskList, buttonRow, footer);
 
     plainButton.addEventListener("click", () => {
       try {
@@ -526,45 +519,33 @@
     });
 
     document.documentElement.append(panel);
+
+    closeButton.addEventListener("click", () => {
+      panel.remove();
+    });
   }
 
   function createRiskRow(risk, locale) {
     const copy = messages[locale];
-    const row = document.createElement("div");
-    row.style.cssText = [
-      "display:grid",
-      "grid-template-columns:auto 1fr",
-      "gap:12px",
-      "align-items:center",
-      "padding:12px 14px",
-      "border-radius:14px",
-      `background:${risk.level === "critical" ? "#fef2f2" : "#fff7ed"}`,
-      `border:1px solid ${risk.level === "critical" ? "#fecaca" : "#fed7aa"}`,
-    ].join(";");
+    const row = document.createElement("li");
+    row.className = "veil-risk";
 
     const badge = document.createElement("span");
+    badge.className = `badge ${risk.level === "critical" ? "crit" : "notice"}`;
     badge.textContent = risk.level === "critical" ? copy.critical : copy.warning;
-    badge.style.cssText = [
-      "display:inline-flex",
-      "align-items:center",
-      "border-radius:999px",
-      "padding:3px 8px",
-      "font-size:12px",
-      "font-weight:700",
-      `background:${risk.level === "critical" ? "#dc2626" : "#f97316"}`,
-      "color:#fff",
-    ].join(";");
 
-    const body = document.createElement("div");
+    const head = document.createElement("div");
+    head.className = "veil-risk-head";
     const name = document.createElement("div");
+    name.className = "veil-risk-t";
     name.textContent = risk.title;
-    name.style.cssText = "font-size:15px;font-weight:800;letter-spacing:-.01em";
-    const detail = document.createElement("div");
-    detail.textContent = risk.detail;
-    detail.style.cssText = "margin-top:2px;color:#475569";
-    body.append(name, detail);
+    head.append(badge, name);
 
-    row.append(badge, body);
+    const detail = document.createElement("div");
+    detail.className = "veil-risk-d";
+    detail.textContent = risk.detail;
+
+    row.append(head, detail);
     return row;
   }
 
@@ -585,6 +566,27 @@
 
   function riskRank(level) {
     return level === "critical" ? 0 : 1;
+  }
+
+  function riskFieldName(inputText, finding) {
+    const prefix = inputText.slice(0, finding.start);
+    if (finding.kind === "URL_TOKEN") {
+      return prefix.match(/[?&]([^=&\s'"`)\]}<>,]+)=$/i)?.[1] ?? "";
+    }
+    if (finding.kind === "COOKIE") {
+      return prefix.match(/(?:^|[;\s])([^=;\s]+)=$/i)?.[1] ?? "";
+    }
+    if (finding.kind === "API_KEY_HEADER") {
+      return lineForFinding(inputText, finding).match(/^\s*([^:\n]+)\s*:/)?.[1] ?? "";
+    }
+    return "";
+  }
+
+  function lineForFinding(inputText, finding) {
+    const lineStart = inputText.lastIndexOf("\n", finding.start - 1) + 1;
+    const nextLine = inputText.indexOf("\n", finding.end);
+    const lineEnd = nextLine === -1 ? inputText.length : nextLine;
+    return inputText.slice(lineStart, lineEnd);
   }
 
   function riskItem(inputText, finding, locale) {
@@ -629,36 +631,36 @@
 
   function showRedactionCompleteToast(inputText, findings, automatic) {
     document.getElementById("veilpaste-toast")?.remove();
+    ensureVeilPasteStyles();
     const locale = currentLocale();
     const copy = messages[locale];
 
     const toast = document.createElement("div");
     toast.id = "veilpaste-toast";
-    toast.style.cssText = [
-      "position:fixed",
-      "right:20px",
-      "bottom:20px",
-      "z-index:2147483647",
-      "width:min(340px, calc(100vw - 40px))",
-      "padding:14px",
-      "border:1px solid #bbf7d0",
-      "border-radius:16px",
-      "background:linear-gradient(145deg,#f0fdf4,#ffffff)",
-      "color:#102018",
-      "font:13px/1.45 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif",
-      "box-shadow:0 20px 60px rgba(22,101,52,.18)",
-    ].join(";");
+    toast.className = "veil-toast";
 
-    const title = document.createElement("strong");
+    const header = document.createElement("div");
+    header.className = "veil-toast-h";
+    const check = document.createElement("span");
+    check.className = "check";
+    check.textContent = "✓";
+    const title = document.createElement("div");
+    title.className = "title";
     title.textContent = automatic ? copy.toastAutomatic : copy.toastDone;
-    title.style.cssText = "display:block;margin:0 0 7px;font-size:15px";
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.className = "close";
+    closeButton.textContent = "×";
+    closeButton.setAttribute("aria-label", copy.closeAria);
+    header.append(check, title, closeButton);
 
+    const body = document.createElement("div");
+    body.className = "body";
     const label = document.createElement("div");
+    label.className = "label";
     label.textContent = copy.handled;
-    label.style.cssText = "margin:0 0 5px;color:#166534;font-weight:800";
 
     const list = document.createElement("ul");
-    list.style.cssText = "margin:0 0 8px;padding-left:17px";
     const risks = riskItems(inputText, findings, locale);
     for (const risk of risks.slice(0, 3)) {
       const item = document.createElement("li");
@@ -670,27 +672,16 @@
       item.textContent = copy.moreHandled(risks.length - 3);
       list.append(item);
     }
+    body.append(label, list);
 
     const detail = document.createElement("p");
+    detail.className = "veil-toast-foot";
     detail.textContent = copy.safePasted;
-    detail.style.cssText = "margin:0;color:#475569";
 
-    const closeButton = document.createElement("button");
-    closeButton.type = "button";
-    closeButton.textContent = copy.close;
-    closeButton.setAttribute("aria-label", copy.closeAria);
-    closeButton.style.cssText = [
-      "position:absolute",
-      "top:10px",
-      "right:10px",
-      "border:0",
-      "background:transparent",
-      "color:#64748b",
-      "font:700 12px/1 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif",
-      "cursor:pointer",
-    ].join(";");
+    const progress = document.createElement("div");
+    progress.className = "veil-progress";
 
-    toast.append(title, label, list, detail, closeButton);
+    toast.append(header, body, detail, progress);
     document.documentElement.append(toast);
 
     const timer = setTimeout(() => {
@@ -702,21 +693,15 @@
     });
   }
 
-  function createPanelButton(label, primary = false) {
+  function createPanelButton(label, primary = false, variant = "") {
     const button = document.createElement("button");
     button.type = "button";
+    button.className = variant
+      ? `veil-btn ${variant}`
+      : primary
+        ? "veil-btn recommend"
+        : "veil-btn subtle";
     button.textContent = label;
-    button.style.cssText = [
-      "appearance:none",
-      `border:1px solid ${primary ? "#f97316" : "#d7c8b5"}`,
-      "border-radius:10px",
-      `background:${primary ? "#fff7ed" : "#ffffff"}`,
-      `color:${primary ? "#c2410c" : "#334155"}`,
-      "padding:8px 12px",
-      "font:inherit",
-      `font-weight:${primary ? "800" : "600"}`,
-      "cursor:pointer",
-    ].join(";");
     return button;
   }
 
@@ -724,24 +709,358 @@
     const copy = messages[currentLocale()];
     const button = document.createElement("button");
     button.type = "button";
+    button.className = "gear";
     button.textContent = copy.settings;
     button.title = copy.settingsTitle;
     button.setAttribute("aria-label", copy.settingsTitle);
-    button.style.cssText = [
-      "appearance:none",
-      "display:inline-flex",
-      "align-items:center",
-      "justify-content:center",
-      "height:30px",
-      "padding:0 9px",
-      "border:1px solid #cbd5e1",
-      "border-radius:999px",
-      "background:#ffffffcc",
-      "color:#334155",
-      "font:700 12px/1 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif",
-      "cursor:pointer",
-    ].join(";");
     return button;
+  }
+
+  function ensureVeilPasteStyles() {
+    if (document.getElementById("veilpaste-style")) {
+      return;
+    }
+    if (!document.head?.append) {
+      return;
+    }
+    const style = document.createElement("style");
+    style.id = "veilpaste-style";
+    style.textContent = `
+      :root {
+        --vp-bg:#fbfbfa;
+        --vp-surface:#ffffff;
+        --vp-surface-2:#f6f5f3;
+        --vp-ink:#14130f;
+        --vp-ink-2:#4a4842;
+        --vp-ink-3:#807d76;
+        --vp-ink-4:#aeaaa3;
+        --vp-line:#e8e6e2;
+        --vp-line-strong:#d9d6d1;
+        --vp-accent:#5b4fcf;
+        --vp-accent-soft:color-mix(in oklab, var(--vp-accent) 8%, transparent);
+        --vp-accent-line:color-mix(in oklab, var(--vp-accent) 22%, transparent);
+        --vp-critical:#c8372d;
+        --vp-critical-soft:#fdecea;
+        --vp-notice:#b87100;
+        --vp-notice-soft:#fbf2e0;
+        --vp-ok:#2d7a5a;
+        --vp-shadow-pop:0 1px 2px rgba(20,19,15,.05), 0 8px 22px rgba(20,19,15,.08), 0 24px 60px rgba(20,19,15,.10);
+      }
+      .veil-prompt,
+      .veil-toast {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        z-index: 2147483647;
+        color: var(--vp-ink);
+        background: color-mix(in oklab, var(--vp-surface) 88%, transparent);
+        backdrop-filter: saturate(1.4) blur(28px);
+        -webkit-backdrop-filter: saturate(1.4) blur(28px);
+        border: 1px solid color-mix(in oklab, var(--vp-ink) 9%, transparent);
+        box-shadow: var(--vp-shadow-pop);
+        font: 13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Helvetica,system-ui,sans-serif;
+      }
+      .veil-prompt {
+        width: min(400px, calc(100vw - 40px));
+        max-height: min(560px, calc(100vh - 48px));
+        display: flex;
+        flex-direction: column;
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      .veil-prompt-h {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: start;
+        gap: 10px;
+        padding: 14px 14px 8px;
+      }
+      .veil-prompt-h .status,
+      .veil-toast .check {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .veil-prompt-h .status {
+        color: var(--vp-notice);
+        background: color-mix(in oklab, var(--vp-notice) 14%, transparent);
+        margin-top: 1px;
+      }
+      .veil-prompt .title {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: -.005em;
+        line-height: 1.4;
+      }
+      .veil-prompt .sub {
+        margin-top: 2px;
+        color: var(--vp-ink-3);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .veil-prompt-h .close {
+        appearance: none;
+        width: 22px;
+        height: 22px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--vp-ink-3);
+        cursor: default;
+        font-size: 14px;
+      }
+      .veil-prompt-h .close:hover {
+        background: color-mix(in oklab, var(--vp-ink) 6%, transparent);
+        color: var(--vp-ink);
+      }
+      .veil-risks {
+        margin: 0;
+        padding: 2px 14px;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        max-height: 248px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: color-mix(in oklab, var(--vp-ink) 18%, transparent) transparent;
+      }
+      .veil-risks::-webkit-scrollbar { width: 6px; }
+      .veil-risks::-webkit-scrollbar-thumb {
+        background: color-mix(in oklab, var(--vp-ink) 18%, transparent);
+        border-radius: 3px;
+      }
+      .veil-risk {
+        display: block;
+        padding: 8px 0;
+        border-top: 1px solid color-mix(in oklab, var(--vp-ink) 6%, transparent);
+      }
+      .veil-risk:first-child { border-top: 0; }
+      .veil-risk-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .veil-risk-t {
+        min-width: 0;
+        color: var(--vp-ink);
+        font-size: 12.5px;
+        font-weight: 500;
+        line-height: 1.35;
+      }
+      .veil-risk-d {
+        margin-top: 3px;
+        color: var(--vp-ink-3);
+        font-size: 11.5px;
+        line-height: 1.4;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 7px 2px 6px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        font-size: 10.5px;
+        font-weight: 500;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+      }
+      .badge::before {
+        content: "";
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+      }
+      .badge.crit {
+        color: var(--vp-critical);
+        background: var(--vp-critical-soft);
+        border-color: color-mix(in oklab, var(--vp-critical) 20%, transparent);
+      }
+      .badge.crit::before { background: var(--vp-critical); }
+      .badge.notice {
+        color: var(--vp-notice);
+        background: var(--vp-notice-soft);
+        border-color: color-mix(in oklab, var(--vp-notice) 20%, transparent);
+      }
+      .badge.notice::before { background: var(--vp-notice); }
+      .veil-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 12px 14px;
+        border-top: 1px solid color-mix(in oklab, var(--vp-ink) 6%, transparent);
+      }
+      .veil-actions .row {
+        display: flex;
+        gap: 6px;
+      }
+      .veil-actions .row > * { flex: 1; }
+      .veil-btn {
+        appearance: none;
+        border: 1px solid color-mix(in oklab, var(--vp-ink) 14%, transparent);
+        border-radius: 8px;
+        background: color-mix(in oklab, var(--vp-surface) 80%, transparent);
+        color: var(--vp-ink);
+        cursor: default;
+        font: 500 12.5px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Helvetica,system-ui,sans-serif;
+        letter-spacing: -.003em;
+        padding: 7px 10px;
+      }
+      .veil-btn.recommend {
+        color: var(--vp-accent);
+        background: var(--vp-accent-soft);
+        border-color: var(--vp-accent-line);
+      }
+      .veil-btn.recommend:hover {
+        background: color-mix(in oklab, var(--vp-accent) 14%, transparent);
+      }
+      .veil-btn.subtle {
+        color: var(--vp-ink-2);
+        background: transparent;
+        border-color: color-mix(in oklab, var(--vp-ink) 10%, transparent);
+      }
+      .veil-btn.subtle:hover {
+        background: color-mix(in oklab, var(--vp-ink) 4%, transparent);
+        color: var(--vp-ink);
+      }
+      .veil-btn.always {
+        color: var(--vp-ink-2);
+        background: transparent;
+        border-color: color-mix(in oklab, var(--vp-ink) 16%, transparent);
+        border-style: dashed;
+      }
+      .veil-btn.always:hover {
+        background: color-mix(in oklab, var(--vp-accent) 6%, transparent);
+        border-color: var(--vp-accent-line);
+        color: var(--vp-accent);
+      }
+      .gear {
+        appearance: none;
+        border: 0;
+        border-radius: 5px;
+        background: transparent;
+        color: var(--vp-ink-3);
+        cursor: default;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font: 500 11.5px/1 -apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Helvetica,system-ui,sans-serif;
+        padding: 2px 6px;
+      }
+      .gear:hover {
+        background: color-mix(in oklab, var(--vp-ink) 6%, transparent);
+        color: var(--vp-ink);
+      }
+      .veil-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 14px 12px;
+        color: var(--vp-ink-3);
+        font-size: 11px;
+      }
+      .veil-toast {
+        width: min(340px, calc(100vw - 40px));
+        background: color-mix(in oklab, var(--vp-surface) 90%, transparent);
+        border-radius: 12px;
+        overflow: hidden;
+        animation: veilToastIn .28s cubic-bezier(.2,.7,.2,1) both;
+      }
+      @keyframes veilToastIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .veil-toast-h {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 12px 6px;
+      }
+      .veil-toast .check {
+        color: var(--vp-ok);
+        background: color-mix(in oklab, var(--vp-ok) 14%, transparent);
+      }
+      .veil-toast .title {
+        min-width: 0;
+        font-size: 12.5px;
+        font-weight: 600;
+        line-height: 1.35;
+      }
+      .veil-toast .close {
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border: 0;
+        border-radius: 5px;
+        background: transparent;
+        color: var(--vp-ink-3);
+        cursor: default;
+        font-size: 13px;
+      }
+      .veil-toast .close:hover {
+        background: color-mix(in oklab, var(--vp-ink) 6%, transparent);
+        color: var(--vp-ink);
+      }
+      .veil-toast .body { padding: 0 12px 10px; }
+      .veil-toast .label {
+        margin-top: 2px;
+        color: var(--vp-ink-3);
+        font-size: 11px;
+        letter-spacing: .02em;
+      }
+      .veil-toast ul {
+        list-style: none;
+        margin: 6px 0 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .veil-toast li {
+        position: relative;
+        padding-left: 14px;
+        color: var(--vp-ink);
+        font-size: 12px;
+      }
+      .veil-toast li::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 8px;
+        width: 8px;
+        height: 1px;
+        background: var(--vp-ink-4);
+      }
+      .veil-toast-foot {
+        margin: 0;
+        padding: 8px 12px;
+        border-top: 1px solid color-mix(in oklab, var(--vp-ink) 6%, transparent);
+        color: var(--vp-ink-3);
+        background: color-mix(in oklab, var(--vp-surface) 60%, transparent);
+        font-size: 11.5px;
+      }
+      .veil-progress {
+        position: relative;
+        height: 2px;
+        background: color-mix(in oklab, var(--vp-ink) 5%, transparent);
+      }
+      .veil-progress::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        right: 100%;
+        background: color-mix(in oklab, var(--vp-ok) 60%, transparent);
+        animation: veilProgress 4s linear forwards;
+      }
+      @keyframes veilProgress { to { right: 0%; } }
+    `;
+    document.head.append(style);
   }
 
   function openVeilPasteOptions() {

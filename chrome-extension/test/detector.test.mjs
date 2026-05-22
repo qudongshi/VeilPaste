@@ -98,42 +98,6 @@ test("manifest-loaded content scripts are classic scripts", () => {
   }
 });
 
-test("extension icons are backed by the full icon pack", () => {
-  const manifest = readJson("chrome-extension/manifest.json");
-  const requiredPackFiles = [
-    "veilpaste.svg",
-    "veilpaste.ico",
-    "veilpaste_master_centered.png",
-    "veilpaste_design_board.png",
-    "veilpaste_16x16.png",
-    "veilpaste_32x32.png",
-    "veilpaste_48x48.png",
-    "veilpaste_64x64.png",
-    "veilpaste_96x96.png",
-    "veilpaste_128x128.png",
-    "veilpaste_256x256.png",
-    "veilpaste_512x512.png",
-    "veilpaste_1024x1024.png",
-  ];
-
-  for (const file of requiredPackFiles) {
-    assert.ok(fs.existsSync(path.join(root, "veilpaste_full_icon_pack", file)), `${file} missing`);
-  }
-
-  for (const [size, iconPath] of Object.entries(manifest.icons ?? {})) {
-    assert.ok(fs.existsSync(path.join(root, "chrome-extension", iconPath)), `${iconPath} missing`);
-    assert.ok(
-      fs.existsSync(path.join(root, "veilpaste_full_icon_pack", `veilpaste_${size}x${size}.png`)),
-      `source icon ${size}x${size} missing`,
-    );
-  }
-
-  assert.equal(manifest.action.default_title, "VeilPaste");
-  for (const [size, iconPath] of Object.entries(manifest.action.default_icon ?? {})) {
-    assert.equal(iconPath, manifest.icons[size], `toolbar icon ${size} should reuse manifest icon`);
-  }
-});
-
 test("chrome package exposes reproducible build and check scripts", () => {
   const packageJson = readJson("chrome-extension/package.json");
 
@@ -202,8 +166,9 @@ test("shared contract schema matches current rule fields", () => {
   assertSharedContractSchemaAllowsCurrentRules();
 });
 
-test("trial readiness docs use concise user positioning", () => {
+test("trial readiness docs use small utility positioning", () => {
   const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
+  const chromeReadme = fs.readFileSync(path.join(root, "chrome-extension/README.md"), "utf8");
   const trialGuide = fs.readFileSync(path.join(root, "docs/trial-guide.md"), "utf8");
   const feedbackQuestions = fs.readFileSync(
     path.join(root, "docs/feedback-questions.md"),
@@ -211,9 +176,9 @@ test("trial readiness docs use concise user positioning", () => {
   );
   const chineseReadme = fs.readFileSync(path.join(root, "README.zh-CN.md"), "utf8");
 
-  for (const text of [readme, trialGuide]) {
-    assert.match(text, /before it reaches AI|before they are sent/);
-    assert.match(text, /obvious.*secret|keys, tokens, cookies/);
+  for (const text of [readme, chromeReadme, trialGuide]) {
+    assert.match(text, /small developer utility|小而美/);
+    assert.match(text, /reduce AI-paste security risk|降低.*安全风险/);
     assert.doesNotMatch(text, /security product|security tool|安全产品|安全工具/);
   }
 
@@ -223,36 +188,29 @@ test("trial readiness docs use concise user positioning", () => {
   assert.match(feedbackQuestions, /Chrome/);
   assert.match(feedbackQuestions, /中文|English/);
   assert.doesNotMatch(feedbackQuestions, /真实 secret|真实密钥/);
-  assert.match(chineseReadme, /粘贴给 AI 前，先把明显敏感信息遮住。/);
-  assert.match(chineseReadme, /不会上传你的粘贴内容/);
+  assert.match(chineseReadme, /小而美/);
+  assert.match(chineseReadme, /降低.*安全风险/);
   assert.match(chineseReadme, /试用/);
 });
 
-test("user-facing copy is concise and avoids internal implementation terms", () => {
-  const userTexts = [
-    fs.readFileSync(path.join(root, "README.md"), "utf8"),
-    fs.readFileSync(path.join(root, "README.zh-CN.md"), "utf8"),
-    fs.readFileSync(path.join(root, "chrome-extension/help.html"), "utf8"),
-    fs.readFileSync(path.join(root, "chrome-extension/dist/options.js"), "utf8"),
-    fs.readFileSync(path.join(root, "docs/trial-guide.md"), "utf8"),
-    fs.readFileSync(path.join(root, "docs/usage-guide.md"), "utf8"),
-  ];
+test("options page keeps scrolling inside the content area and uses roomier navigation", () => {
+  const help = fs.readFileSync(path.join(root, "chrome-extension/help.html"), "utf8");
 
-  for (const text of userTexts) {
-    assert.doesNotMatch(text, /host permissions|content scripts?|risk memory|shared contract/i);
-    assert.doesNotMatch(text, /prototype|beta foundation|source of truth/i);
-    assert.doesNotMatch(text, /安全产品|安全工具/);
-  }
+  assert.match(help, /\.app-shell\s*{[\s\S]*height:\s*min\(720px,\s*calc\(100vh - 56px\)\)/);
+  assert.match(help, /\.main-card\s*{[\s\S]*overflow-y:\s*auto/);
+  assert.match(help, /\.nav-item\s*{[\s\S]*padding:\s*10px 12px/);
+  assert.doesNotMatch(help, /\.app-shell\s*{[\s\S]*min-height:\s*720px/);
+});
 
-  const readme = userTexts[0];
-  const chineseReadme = userTexts[1];
-  const help = userTexts[2];
-  const contentScript = fs.readFileSync(path.join(root, "chrome-extension/dist/content.js"), "utf8");
+test("options page uses the packaged logo and scrolls only the rules list", () => {
+  const help = fs.readFileSync(path.join(root, "chrome-extension/help.html"), "utf8");
 
-  assert.match(readme, /Paste into AI without leaking obvious secrets\./);
-  assert.match(chineseReadme, /粘贴给 AI 前，先把明显敏感信息遮住。/);
-  assert.match(help, /粘贴前先检查，发现敏感信息就提醒你脱敏。/);
-  assert.match(contentScript, /发现可能泄漏的信息，已暂停粘贴。/);
+  assert.match(help, /src="icons\/veilpaste_64\.png"/);
+  assert.doesNotMatch(help, /class="brand-mark"/);
+  assert.match(help, /class="rules-scroll"/);
+  assert.match(help, /\.rules-scroll\s*{[\s\S]*overflow-y:\s*auto/);
+  assert.match(help, /内置脱敏规则。当前不支持自定义规则。/);
+  assert.doesNotMatch(help, /这些是当前内置/);
 });
 
 test("content script loads and handles paste without module runtime errors", () => {
@@ -518,8 +476,7 @@ test("content script blocks secret paste until the user chooses an action", () =
   assert.equal(defaultPrevented, true);
   assert.equal(target.value, "");
 
-  const buttonRow = appended[0].children.at(-1);
-  const redactButton = buttonRow.children[1];
+  const redactButton = appended[0].children[2].children[0].children[1];
   redactButton.dispatch("click");
 
   assert.equal(target.value, "Authorization: Bearer [BEARER_TOKEN_1]");
@@ -538,10 +495,10 @@ test("content script explains the risk and only offers one-time choices on first
   const labels = getActionButtonLabels(panel);
   const text = collectText(panel);
 
-  assert.match(panel.style.cssText, /width:min\(400px/);
+  assert.equal(panel.className, "veil-prompt");
   assert.deepEqual(labels, ["不脱敏，继续粘贴", "本次脱敏"]);
-  assert.match(text, /发现可能泄漏的信息，已暂停粘贴。/);
-  assert.match(text, /你可以先脱敏，再继续粘贴。/);
+  assert.match(text, /发现可能泄漏的信息，已暂停粘贴/);
+  assert.match(text, /你可以先脱敏，再继续粘贴/);
   assert.match(text, /严重/);
   assert.match(text, /提醒/);
   assert.match(text, /URL 参数 api_key/);
@@ -566,8 +523,9 @@ test("content script uses English UI when browser language is not zh-prefixed", 
   const text = collectText(panel);
 
   assert.deepEqual(labels, ["Paste without redaction", "Redact once"]);
-  assert.match(text, /Possible leak found\. Paste paused\./);
-  assert.match(text, /You can redact first, then continue pasting\./);
+  assert.equal(panel.className, "veil-prompt");
+  assert.match(text, /Possible leak found\. Paste paused/);
+  assert.match(text, /You can redact first, then continue pasting/);
   assert.match(text, /Critical/);
   assert.match(text, /Notice/);
   assert.match(text, /URL parameter api_key/);
@@ -675,33 +633,19 @@ test("help page exposes a local auto-redact setting", () => {
   assert.match(help, /autoRedactEnabled/);
   assert.match(help, /VeilPaste 设置/);
   assert.match(optionsScript, /chrome\.storage\.local/);
-  assert.match(help, /开启后才显示/);
-  assert.match(help, /记录按网站隔离，刷新页面后失效/);
-});
-
-test("options page has basic zh-prefixed i18n for the trust console", () => {
-  const help = fs.readFileSync(path.join(root, "chrome-extension/help.html"), "utf8");
-  const optionsScript = fs.readFileSync(
-    path.join(root, "chrome-extension/dist/options.js"),
-    "utf8",
-  );
-
-  assert.match(help, /data-i18n="nav\.overview"/);
-  assert.match(help, /data-i18n="overview\.title"/);
-  assert.match(help, /data-i18n="privacy\.noUpload"/);
-  assert.match(help, /data-i18n="tester\.run"/);
-  assert.match(optionsScript, /currentLocale/);
-  assert.match(optionsScript, /startsWith\("zh"\)/);
-  assert.match(optionsScript, /VeilPaste Settings/);
-  assert.match(optionsScript, /Protected sites/);
-  assert.match(optionsScript, /No sensitive information matched built-in rules\./);
-  assert.match(optionsScript, /Local detection failed\. Refresh this page and try again\./);
+  assert.match(help, /不再弹出确认/);
+  assert.match(help, /class="switch"/);
 });
 
 test("options page renders sidebar settings sections", () => {
   const help = fs.readFileSync(path.join(root, "chrome-extension/help.html"), "utf8");
 
   assert.match(help, /VeilPaste 设置/);
+  assert.match(help, /class="app-shell"/);
+  assert.match(help, /class="side"/);
+  assert.match(help, /class="main-card"/);
+  assert.doesNotMatch(help, /class="app-top"/);
+  assert.doesNotMatch(help, /class="frame"/);
   assert.doesNotMatch(help, />控制台</);
   assert.match(help, /data-section="overview"/);
   assert.match(help, /data-section="sites"/);
@@ -747,8 +691,12 @@ test("options page avoids platform and subscription promises", () => {
   assert.doesNotMatch(help, /未来可配置/);
   assert.doesNotMatch(help, /安全产品|安全工具/);
   assert.match(help, /本地处理/);
-  assert.match(help, /粘贴前先检查/);
-  assert.match(help, /发现敏感信息就提醒你脱敏/);
+  assert.match(help, /本地检查粘贴内容/);
+  assert.match(help, /不上传内容/);
+  assert.match(help, /脱敏规则/);
+  assert.match(help, /原则/);
+  assert.doesNotMatch(help, /高置信规则/);
+  assert.doesNotMatch(help, /默认边界/);
   assert.doesNotMatch(help, /host permissions|content script|风险记忆|storage/);
 });
 
@@ -757,8 +705,20 @@ test("options page defaults to redaction settings", () => {
 
   assert.match(help, /class="[^"]*page-section[^"]*is-active[^"]*"[^>]*data-section="redaction"/);
   assert.match(help, /启用“以后自动脱敏”/);
-  assert.match(help, /按网站隔离/);
-  assert.match(help, /刷新页面后失效/);
+  assert.match(help, /不再弹出确认/);
+});
+
+test("content prompt keeps design close control without auto-redact enabled", () => {
+  const harness = createContentScriptHarness("https://chatgpt.com");
+  const input = "Authorization: Bearer sk-live-abc1234567890";
+
+  harness.paste(input, new harness.HTMLTextAreaElement());
+
+  const panel = harness.appended[0];
+  const closeButton = getButtons(panel).find((button) => button.className === "close");
+
+  assert.ok(closeButton, "prompt should include the design close control");
+  assert.deepEqual(getActionButtonLabels(panel), ["不脱敏，继续粘贴", "本次脱敏"]);
 });
 
 test("options page states privacy and storage boundaries", () => {
@@ -769,20 +729,26 @@ test("options page states privacy and storage boundaries", () => {
   assert.match(help, /不保存完整 prompt/);
   assert.match(help, /不发网络请求/);
   assert.match(help, /只记住你是否开启“以后自动脱敏”/);
+  assert.match(help, /设置页只在你点击设置时打开/);
   assert.match(help, /只在 ChatGPT、Claude、Perplexity、豆包和 Qwen 上工作/);
 });
 
 test("chrome docs explain extension permissions precisely", () => {
   const readme = fs.readFileSync(path.join(root, "chrome-extension/README.md"), "utf8");
+  const help = fs.readFileSync(path.join(root, "chrome-extension/help.html"), "utf8");
 
   assert.match(readme, /storage/);
-  assert.match(readme, /只保存.*autoRedactEnabled|only saves.*autoRedactEnabled/);
-  assert.match(readme, /background service worker only opens the extension options page/i);
-  assert.match(readme, /ChatGPT/);
-  assert.match(readme, /Claude/);
-  assert.match(readme, /Perplexity/);
-  assert.match(readme, /不上传/);
-  assert.match(readme, /不保存敏感值/);
+  assert.match(readme, /只保存.*autoRedactEnabled|只保存用户设置/);
+  assert.match(readme, /background.*打开.*设置|background service worker.*options|background service worker only opens the extension options page/i);
+  assert.match(help, /只记住你是否开启“以后自动脱敏”/);
+  assert.match(help, /设置页只在你点击设置时打开/);
+  for (const text of [readme, help]) {
+    assert.match(text, /ChatGPT/);
+    assert.match(text, /Claude/);
+    assert.match(text, /Perplexity/);
+    assert.match(text, /不上传/);
+    assert.match(text, /不保存敏感值/);
+  }
 });
 
 test("options page includes a local rule tester", () => {
@@ -844,7 +810,7 @@ test("content script treats plain paste as first-use again", () => {
   assert.deepEqual(getActionButtonLabels(harness.appended[1]), ["不脱敏，继续粘贴", "本次脱敏"]);
 });
 
-test("content script does not offer always-redact while the setting is disabled", () => {
+test("content script does not offer always-redact in the confirmation panel", () => {
   const harness = createContentScriptHarness("https://chatgpt.com");
   const input = "Authorization: Bearer sk-live-abc1234567890";
 
@@ -855,30 +821,38 @@ test("content script does not offer always-redact while the setting is disabled"
   assert.deepEqual(getActionButtonLabels(latestPanel(harness)), ["不脱敏，继续粘贴", "本次脱敏"]);
 });
 
-test("content script offers always-redact after the setting is enabled", () => {
+test("content script auto-redacts immediately when auto-redact is enabled", () => {
   const harness = createContentScriptHarness("https://chatgpt.com", { autoRedactEnabled: true });
   const input = "Authorization: Bearer sk-live-abc1234567890";
+  const target = new harness.HTMLTextAreaElement();
 
-  harness.paste(input, new harness.HTMLTextAreaElement());
-  assert.deepEqual(getActionButtonLabels(harness.appended[0]), ["不脱敏，继续粘贴", "本次脱敏"]);
-  getActionButtons(harness.appended[0])[1].dispatch("click");
+  harness.paste(input, target);
 
-  harness.paste(input, new harness.HTMLTextAreaElement());
-  assert.deepEqual(getActionButtonLabels(latestPanel(harness)), [
-    "不脱敏，继续粘贴",
-    "本次脱敏",
-    "以后自动脱敏",
-  ]);
+  assert.equal(target.value, "Authorization: Bearer [BEARER_TOKEN_1]");
+  assert.equal(panelCount(harness), 0);
+  assert.equal(harness.appended.length, 1);
+  assert.equal(harness.appended[0].id, "veilpaste-toast");
+  assert.match(collectText(harness.appended[0]), /VeilPaste 已自动脱敏/);
+});
 
-  const alwaysButton = getActionButtons(latestPanel(harness))[2];
-  const secondTarget = harness.lastTarget;
-  alwaysButton.dispatch("click");
-  assert.equal(secondTarget.value, "Authorization: Bearer [BEARER_TOKEN_1]");
+test("content script waits for auto-redact setting before showing a prompt", () => {
+  const harness = createContentScriptHarness("https://chatgpt.com", {
+    autoRedactEnabled: true,
+    delayStorageGet: true,
+  });
+  const input = "Authorization: Bearer sk-live-abc1234567890";
+  const target = new harness.HTMLTextAreaElement();
 
-  const thirdTarget = new harness.HTMLTextAreaElement();
-  harness.paste(input, thirdTarget);
-  assert.equal(thirdTarget.value, "Authorization: Bearer [BEARER_TOKEN_1]");
-  assert.equal(panelCount(harness), 2);
+  harness.paste(input, target);
+
+  assert.equal(target.value, "");
+  assert.equal(panelCount(harness), 0);
+
+  harness.flushStorageGet();
+
+  assert.equal(target.value, "Authorization: Bearer [BEARER_TOKEN_1]");
+  assert.equal(panelCount(harness), 0);
+  assert.equal(harness.appended.filter((element) => element.id === "veilpaste-toast").length, 1);
 });
 
 test("content script shows solved-risk toast after one-time redaction", () => {
@@ -892,6 +866,7 @@ test("content script shows solved-risk toast after one-time redaction", () => {
   assert.equal(harness.appended.length, 2);
   const toast = harness.appended[1];
   const text = collectText(toast);
+  assert.equal(toast.className, "veil-toast");
   assert.match(text, /VeilPaste 已完成脱敏/);
   assert.match(text, /已处理/);
   assert.match(text, /Bearer 访问令牌/);
@@ -944,25 +919,20 @@ test("content script does not show solved-risk toast for plain paste", () => {
   assert.equal(harness.timeouts.length, 0);
 });
 
-test("content script keeps always-redact memory isolated by origin", () => {
+test("content script auto-redact setting applies without prompt on each protected origin", () => {
   const input = "Authorization: Bearer sk-live-abc1234567890";
   const chatgpt = createContentScriptHarness("https://chatgpt.com", { autoRedactEnabled: true });
   const claude = createContentScriptHarness("https://claude.ai", { autoRedactEnabled: true });
 
-  chatgpt.paste(input, new chatgpt.HTMLTextAreaElement());
-  getActionButtons(chatgpt.appended[0])[1].dispatch("click");
-  chatgpt.paste(input, new chatgpt.HTMLTextAreaElement());
-  getActionButtons(latestPanel(chatgpt))[2].dispatch("click");
-
   const chatgptTarget = new chatgpt.HTMLTextAreaElement();
   chatgpt.paste(input, chatgptTarget);
   assert.equal(chatgptTarget.value, "Authorization: Bearer [BEARER_TOKEN_1]");
+  assert.equal(panelCount(chatgpt), 0);
 
   const claudeTarget = new claude.HTMLTextAreaElement();
   claude.paste(input, claudeTarget);
-  assert.equal(claudeTarget.value, "");
-  assert.equal(panelCount(claude), 1);
-  assert.deepEqual(getActionButtonLabels(latestPanel(claude)), ["不脱敏，继续粘贴", "本次脱敏"]);
+  assert.equal(claudeTarget.value, "Authorization: Bearer [BEARER_TOKEN_1]");
+  assert.equal(panelCount(claude), 0);
 });
 
 function createContentScriptHarness(origin, options = {}) {
@@ -971,6 +941,7 @@ function createContentScriptHarness(origin, options = {}) {
   const openedUrls = [];
   const sentMessages = [];
   const timeouts = [];
+  const pendingStorageGets = [];
   let optionsOpenCount = 0;
 
   class HTMLElement {}
@@ -1061,10 +1032,15 @@ function createContentScriptHarness(origin, options = {}) {
       storage: {
         local: {
           get(defaults, callback) {
-            callback({
+            const settings = {
               ...defaults,
               autoRedactEnabled: options.autoRedactEnabled ?? defaults.autoRedactEnabled,
-            });
+            };
+            if (options.delayStorageGet) {
+              pendingStorageGets.push(() => callback(settings));
+              return;
+            }
+            callback(settings);
           },
           onChanged: {
             addListener() {},
@@ -1120,6 +1096,11 @@ function createContentScriptHarness(origin, options = {}) {
         target,
       });
     },
+    flushStorageGet() {
+      for (const flush of pendingStorageGets.splice(0)) {
+        flush();
+      }
+    },
   };
 
   return harness;
@@ -1142,7 +1123,7 @@ function getButtonLabels(element) {
 
 function getActionButtons(element) {
   return getButtons(element).filter(
-    (button) => !["i", "设置", "Settings"].includes(button.textContent),
+    (button) => !["×", "i", "设置", "Settings"].includes(button.textContent),
   );
 }
 

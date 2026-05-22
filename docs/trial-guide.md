@@ -1,14 +1,14 @@
 # VeilPaste Trial Guide
 
-VeilPaste helps you paste developer text into AI with less risk. It catches obvious keys, tokens, cookies, private keys, and connection strings before they are sent.
+VeilPaste is a small developer utility to reduce AI-paste security risk. It catches obvious developer secrets and sensitive config values before they are pasted into AI tools.
 
-This trial is for 10-20 developers. Use fake or already-redacted examples. Do not use production secrets, private customer data, or live credentials.
+This trial is for 10-20 developers. Use fake or already-redacted examples during feedback. Do not send production secrets, private customer data, or live credentials.
 
 ## What To Try
 
 ### CLI
 
-Use the CLI for logs, `.env` files, curl commands, headers, and config snippets.
+Use the CLI when you have logs, `.env` files, curl commands, headers, or config snippets.
 
 ```bash
 echo 'Authorization: Bearer sk-live-abc1234567890' | veilpaste
@@ -20,42 +20,43 @@ Expected output:
 Authorization: Bearer [BEARER_TOKEN_1]
 ```
 
-Preview changes before redacting:
+Try preview mode when you want to see what would be changed:
 
 ```bash
 veilpaste scrub fixtures/curl/request.curl --preview
 ```
 
-Restore only when you need a local editing workflow:
+Use mapping only for local restore workflows:
 
 ```bash
 veilpaste scrub .env --map .veilpaste/session.json > redacted.env
 veilpaste restore ai-output.env --map .veilpaste/session.json
 ```
 
-The map contains original values. Keep it local.
+Mapping files contain originals and must stay local.
 
-### Chrome Extension
+### Chrome Paste Guard
 
-Use the extension when pasting into ChatGPT, Claude, Perplexity, Doubao, or Qwen.
+Use the Chrome extension when pasting into ChatGPT, Claude, Perplexity, Doubao, or Qwen.
 
 1. Open `chrome://extensions`.
 2. Enable Developer Mode.
 3. Click `Load unpacked`.
 4. Select `chrome-extension/`.
-5. Refresh the AI page.
-6. Paste fake text that contains a Bearer token, cookie, URL token, or config secret.
+5. Refresh the target AI page.
+6. Paste a fake Bearer token, cookie, URL token, or config snippet.
 
-VeilPaste should pause the paste, show what it found, and let you choose whether to paste as-is or redact first.
+The extension should pause the paste, explain what it found, and let you choose whether to paste as-is or redact for this paste.
 
 ## Current Boundaries
 
 - Detection runs locally.
 - No telemetry is collected.
-- No prompt or secret is uploaded.
-- Temporary choices reset after refresh.
-- The only saved setting is whether “Always redact” is enabled.
-- English and Chinese UI support is for usability, not broad language detection.
+- No prompt, secret, or risk fingerprint is uploaded.
+- Chrome risk memory is session-only.
+- `autoRedactEnabled` is the only persistent Chrome setting.
+- Placeholder tokens stay in English and machine-readable.
+- English and Chinese UI/context support is for beta usability, not broad language classification.
 
 ## What Feedback Matters
 
@@ -63,5 +64,5 @@ VeilPaste should pause the paste, show what it found, and let you choose whether
 - Did the CLI or Chrome entry point feel more natural?
 - Did any warning feel too noisy?
 - Did it miss an obvious fake token in English or Chinese surrounding text?
-- Did it change safe surrounding text?
+- Did it alter safe surrounding text?
 - Would you use it again during AI-assisted debugging?

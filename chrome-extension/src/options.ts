@@ -10,7 +10,7 @@ const messages = {
     "nav.tester": "测试区",
     "overview.title": "VeilPaste",
     "overview.body":
-      "粘贴前先检查，发现敏感信息就提醒你脱敏。",
+      "在本地检查粘贴内容，发现敏感信息后帮你先脱敏，再继续粘贴；不上传内容。",
     "overview.metricSites": "当前保护网址",
     "overview.metricRules": "内置保护规则",
     "overview.metricNetwork": "网络请求",
@@ -23,7 +23,7 @@ const messages = {
     "sites.customTitle": "自定义网址",
     "sites.customBody": "当前不能自己添加网址。后续会单独设计这个能力。",
     "rules.title": "保护规则",
-    "rules.body": "这些是当前内置启用的高置信规则。当前不支持自定义规则。",
+    "rules.body": "内置脱敏规则。当前不支持自定义规则。",
     "rules.critical": "严重",
     "rules.warning": "提醒",
     "rules.enabled": "内置启用",
@@ -46,9 +46,9 @@ const messages = {
     "redaction.title": "脱敏设置",
     "redaction.body": "设置发现敏感信息后的处理方式。",
     "redaction.autoTitle": "启用“以后自动脱敏”",
-    "redaction.autoBody": "开启后才显示“以后自动脱敏”。记录按网站隔离，刷新页面后失效。",
+    "redaction.autoBody": "开启后检测到敏感信息会自动脱敏，不再弹出确认。",
     "privacy.title": "隐私与存储",
-    "privacy.body": "VeilPaste 的默认边界是本地处理、最小存储。",
+    "privacy.body": "VeilPaste 的原则是本地处理、最小存储。",
     "privacy.noUpload": "不上传粘贴内容",
     "privacy.noSecrets": "不保存敏感值",
     "privacy.noPrompt": "不保存完整 prompt",
@@ -74,7 +74,7 @@ const messages = {
     "nav.tester": "Local test",
     "overview.title": "VeilPaste",
     "overview.body":
-      "Checks before paste and helps redact sensitive information before it reaches AI.",
+      "Checks pasted text locally, helps redact sensitive information before you continue, and does not upload content.",
     "overview.metricSites": "Protected sites",
     "overview.metricRules": "Built-in rules",
     "overview.metricNetwork": "Network requests",
@@ -87,7 +87,7 @@ const messages = {
     "sites.customTitle": "Custom sites",
     "sites.customBody": "Custom sites are not available yet. This will be designed separately.",
     "rules.title": "Protection rules",
-    "rules.body": "These high-confidence built-in rules are enabled today. Custom rules are not supported yet.",
+    "rules.body": "Built-in redaction rules. Custom rules are not supported yet.",
     "rules.critical": "Critical",
     "rules.warning": "Notice",
     "rules.enabled": "Built in",
@@ -110,9 +110,9 @@ const messages = {
     "redaction.title": "Redaction settings",
     "redaction.body": "Choose what happens after sensitive information is found.",
     "redaction.autoTitle": "Enable “Always redact”",
-    "redaction.autoBody": "Only shows “Always redact” after this is enabled. Records are isolated by site and expire after refresh.",
+    "redaction.autoBody": "When enabled, VeilPaste redacts sensitive information automatically without a confirmation prompt.",
     "privacy.title": "Privacy & storage",
-    "privacy.body": "VeilPaste defaults to local processing and minimal storage.",
+    "privacy.body": "VeilPaste follows local processing and minimal storage principles.",
     "privacy.noUpload": "Does not upload pasted content",
     "privacy.noSecrets": "Does not store sensitive values",
     "privacy.noPrompt": "Does not store the full prompt",
@@ -162,7 +162,9 @@ for (const item of navItems) {
   item.addEventListener("click", () => {
     const target = item.getAttribute("data-target");
     for (const navItem of navItems) {
-      navItem.classList.toggle("is-active", navItem === item);
+      const isActive = navItem === item;
+      navItem.classList.toggle("is-active", isActive);
+      navItem.classList.toggle("active", isActive);
     }
     for (const section of sections) {
       const isActive = section.dataset.section === target;

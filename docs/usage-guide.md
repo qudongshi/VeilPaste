@@ -1,6 +1,6 @@
 # VeilPaste Usage Guide
 
-This guide shows how to install VeilPaste and use the common workflows. VeilPaste checks developer text before it reaches AI and replaces obvious secrets with readable placeholders.
+This guide shows how to install VeilPaste, run the common workflows, and explain it to early users. VeilPaste is a small developer utility to reduce AI-paste security risk by catching obvious developer secrets before they are pasted.
 
 ## 1. Install Locally
 
@@ -134,13 +134,13 @@ Use strict mode for extra-sensitive review, not as the default daily workflow.
 Use this 20-second explanation:
 
 ```txt
-VeilPaste checks logs, curl commands, .env files, and headers before you paste them into AI. It runs locally and replaces obvious secrets with placeholders.
+VeilPaste is a small local utility that helps clean logs, curl commands, .env files, and headers before you paste them into AI. It runs locally, does not collect telemetry, and only redacts high-confidence secrets by default.
 ```
 
 More precise version:
 
 ```txt
-VeilPaste lowers the chance of leaking obvious secrets, but it does not prove a prompt is safe. Review sensitive content before sending it to AI.
+VeilPaste reduces AI-paste security risk by catching obvious developer secrets before paste. It is not a guarantee that content is safe; check known misses for unsupported formats.
 ```
 
 Ask early users:

@@ -1,6 +1,6 @@
 # VeilPaste Chrome Extension
 
-This is a focused developer utility for validating whether paste-time intervention can reduce AI-paste security risk.
+This is a small developer utility for validating whether paste-time intervention can reduce AI-paste security risk.
 
 It is intentionally limited to paste-time checks for obvious developer secrets.
 
@@ -24,12 +24,11 @@ When pasted text contains high-confidence developer secrets, VeilPaste pauses th
 
 - risk cards sorted by severity,
 - `不脱敏，继续粘贴`,
-- `本次脱敏`,
-- `以后自动脱敏` only when the local setting is enabled and the same site/session has already used redaction for the same risk fingerprint.
+- `本次脱敏`.
 
 The extension does not rewrite the input until the user chooses a redaction action.
 
-Automatic redaction memory is scoped by origin and page session. A ChatGPT decision does not apply to Claude, and a page refresh clears the risk memory.
+When `autoRedactEnabled` is on, VeilPaste redacts matching paste content immediately and shows a short completion toast instead of the confirmation panel.
 
 The options page is a sidebar-style `VeilPaste 设置` page with:
 
@@ -47,7 +46,7 @@ Privacy boundary in user-facing terms: 不上传粘贴内容，不保存敏感�
 
 `host_permissions` are limited to ChatGPT, Claude, Perplexity, Doubao, and Qwen because this prototype is only testing AI paste workflows.
 
-`storage` 只保存 `autoRedactEnabled`, the local setting that controls whether the optional `以后自动脱敏` action can appear. It does not store pasted text, secret values, or risk memory.
+`storage` 只保存 `autoRedactEnabled`, the local setting that controls whether matching paste content is redacted automatically without a confirmation panel. It does not store pasted text, secret values, or risk memory.
 
 The background service worker only opens the extension options page when the paste panel `设置` button asks for it.
 

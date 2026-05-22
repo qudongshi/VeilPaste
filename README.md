@@ -1,10 +1,24 @@
 # VeilPaste
 
-Paste into AI without leaking obvious secrets.
+```txt
+Small developer utility for reducing AI-paste security risk.
+```
 
-VeilPaste checks text before it reaches AI tools. It looks for common developer secrets such as API keys, Bearer tokens, cookies, private keys, and database URLs, then replaces them with readable placeholders.
+VeilPaste is a small developer utility that catches obvious developer secrets in logs, curl commands, `.env` files, headers, and config snippets before you paste them into ChatGPT, Claude, Codex, or other AI tools.
 
-It runs locally by default. It does not upload your prompt, store secret values, or require an account.
+It helps reduce AI-paste security risk, but it does not guarantee that content is safe to send to an external AI service. Read [Known Misses](docs/known-misses.md) and the [Threat Model](docs/threat-model.md) before using it with highly sensitive data.
+
+## Why
+
+Developers routinely paste debugging context into AI:
+
+- production logs
+- curl requests
+- `.env` files
+- stack traces
+- HTTP headers
+
+Those snippets often contain API keys, Bearer tokens, JWTs, cookies, and URL secrets. Manual deletion is fragile.
 
 ## Quick Demo
 
@@ -31,28 +45,15 @@ veilpaste scrub fixtures/curl/request.curl --preview
 ```
 
 Full walkthrough: [docs/usage-guide.md](docs/usage-guide.md).
-
-## Chrome Extension
-
-The Chrome extension pauses risky paste operations on ChatGPT, Claude, Perplexity, Doubao, and Qwen.
-
-When VeilPaste finds a possible leak, you can choose:
-
-- paste without redaction
-- redact this paste
-- always redact this kind of paste on the current site
-
-Load it from `chrome-extension/` while testing locally.
+Recording script: [docs/demo-script.md](docs/demo-script.md).
 
 ## Reversible Redaction
-
-For local file-editing workflows, VeilPaste can keep a local restore map:
 
 ```bash
 veilpaste scrub .env --map .veilpaste/session.json > redacted.env
 ```
 
-Example:
+Example scrub:
 
 ```txt
 OPENAI_API_KEY=sk-proj-abcdefghijklmnopqrstuvwxyz
@@ -64,13 +65,13 @@ becomes:
 OPENAI_API_KEY=[OPENAI_KEY_1]
 ```
 
-If AI returns an edited file containing `[OPENAI_KEY_1]`, restore it locally:
+If AI returns an edited file containing `[OPENAI_KEY_1]`, restore locally:
 
 ```bash
 veilpaste restore ai-output.env --map .veilpaste/session.json
 ```
 
-The map contains original secrets. Keep it local and do not commit it.
+Mapping is optional. It is a local plain-text restore workflow for config-editing use cases, not a security boundary.
 
 ## Commands
 
@@ -86,7 +87,7 @@ veilpaste check input.txt
 veilpaste explain input.txt
 ```
 
-Use `--quiet` when stdout should contain only redacted text.
+Use `--quiet` for pipelines where stdout must contain only scrubbed content.
 
 ## Install From This Checkout
 
@@ -100,32 +101,74 @@ Equivalent command:
 cargo install --path crates/veilpaste-cli
 ```
 
-## What It Catches
+## Release Checks
 
-VeilPaste focuses on high-confidence developer secrets:
+```bash
+cargo fmt --all --check
+cargo test
+cargo build --release
+veilpaste --version
+```
 
-- Bearer tokens and basic auth credentials
-- API key headers
-- JWTs and cookie values
-- OpenAI, AWS, GitHub, and Stripe keys
+## CLI And Chrome Contract
+
+VeilPaste has two local entry points:
+
+- CLI: trusted local core for files, stdin/stdout, mapping, restore, preview, and check workflows.
+- Chrome paste guard: paste-time guard for ChatGPT, Claude, Perplexity, Doubao, and Qwen.
+
+Both entry points must stay aligned through `fixtures/shared-contract/rules.json` and `fixtures/shared-vectors/`. A new detector rule must update the shared contract, shared vectors, Rust tests, and Chrome tests before it is considered supported.
+
+The shared contract defines rule identity, severity, placeholder prefix, redaction span policy, and user-facing risk copy. It is not a shared detector implementation.
+
+## V0 Detection Scope
+
+VeilPaste V0 defaults to high-confidence secrets only:
+
+- Bearer token
+- Basic auth credential
+- API key headers such as `X-Api-Key`, `X-Auth-Token`, and `Api-Key`
+- JWT
+- Cookie values
+- OpenAI keys
+- AWS access keys
+- GitHub `ghp_` / `ghs_` tokens
+- Stripe `sk_live_` / `pk_live_` keys
 - `.env` secret values
-- database and service URLs
-- Slack and Discord webhook URLs
-- URL username/password values
-- PEM private keys
-- npm, pypirc, and Docker registry credentials
-- URL query secrets such as `token`, `api_key`, `secret`, and `password`
+- database and service URLs such as `DATABASE_URL`, `REDIS_URL`, `MONGO_URI`, and `SENTRY_DSN`
+- known high-confidence webhook URLs such as Slack and Discord webhooks
+- URL userinfo such as `https://user:pass@host`
+- PEM private key blocks
+- `.npmrc`, `.pypirc`, and Docker registry auth snippets
+- URL query secrets such as `token`, `api_key`, `secret`, `password`
 
-It does not redact ordinary email addresses, phone numbers, IP addresses, names, project names, or UUIDs by default.
+VeilPaste does not redact these by default:
 
-See [Known Misses](docs/known-misses.md) for unsupported cases.
+- email
+- phone number
+- normal IP address
+- person name
+- internal project name
+- ordinary UUID
 
-## Trust Boundaries
+Known misses are documented in [docs/known-misses.md](docs/known-misses.md).
 
-- Local processing by default.
+## Trust Guarantees
+
+- No network calls by default.
 - No telemetry by default.
 - No account required.
-- Mapping files stay on your machine.
-- Redaction lowers risk, but it does not prove a prompt is safe to send.
+- Inputs are processed locally.
+- Mapping files stay local.
+
+If you write a mapping under `.veilpaste/` inside a git repo and the directory is not ignored, VeilPaste warns:
+
+```txt
+WARNING: mapping file contains original secrets. Do not commit it. Add .veilpaste/ to .gitignore.
+```
 
 Read [docs/threat-model.md](docs/threat-model.md) before using VeilPaste with highly sensitive data.
+
+## Warning
+
+VeilPaste catches obvious secrets; it does not make a prompt safe. Review highly sensitive content manually before sending it to any AI system.
