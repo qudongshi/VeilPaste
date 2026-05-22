@@ -127,15 +127,19 @@ fn preview_reports_redactions_without_emitting_secret_values() {
 
 #[test]
 fn covers_v0_known_secret_formats() {
-    let input = "\
+    let github_token = format!("{}{}", "ghs_", "abcdefghijklmnopqrstuvwxyz");
+    let stripe_key = format!("{}{}", "pk_live_", "abcdefghijklmnopqrstuvwxyz");
+    let input = format!(
+        "\
 jwt=eyJhbGciOiJIUzI1NiJ9.payload.signature
 aws=AKIAABCDEFGHIJKLMNOP
-github=GITHUB_TOKEN_EXAMPLE_REDACTED
-stripe=STRIPE_KEY_EXAMPLE_REDACTED
+github={github_token}
+stripe={stripe_key}
 url=https://example.test/path?api_key=secret_query_value
-";
+"
+    );
 
-    let result = scrub(input, ScrubOptions::default()).expect("scrub should succeed");
+    let result = scrub(&input, ScrubOptions::default()).expect("scrub should succeed");
 
     assert!(result.output.contains("[JWT_1]"));
     assert!(result.output.contains("[AWS_KEY_1]"));

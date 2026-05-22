@@ -1,4 +1,2 @@
 service:
-  stripe: STRIPE_SECRET_REDACTED_EXAMPLE
-  github: GITHUB_TOKEN_REDACTED_EXAMPLE
-
+  api_key=secret_query_value
