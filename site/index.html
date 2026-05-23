@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VeilPaste - 本地 AI 粘贴脱敏工具</title>
+    <meta
+      data-i18n-meta="description"
+      name="description"
+      content="VeilPaste 在你把日志、curl、.env 或配置片段粘贴到 AI 网站前，本地识别明显的开发者密钥并协助脱敏。"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script src="site-i18n.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="VeilPaste home">
+        <span class="brand-mark" aria-hidden="true">V</span>
+        <span>VeilPaste</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="privacy.html" data-i18n="nav.privacy">隐私政策</a>
+        <a href="support.html" data-i18n="nav.support">支持</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <p class="eyebrow" data-i18n="home.eyebrow">Local paste guard for AI workflows</p>
+        <h1 data-i18n="home.title">在粘贴给 AI 之前，先本地发现明显的密钥风险。</h1>
+        <p class="lede" data-i18n="home.lede">
+          VeilPaste 是一个小型开发者工具。它在 ChatGPT、Claude、Perplexity、豆包和
+          Qwen 上监听用户主动粘贴的文本，发现明显的 API key、Bearer token、Cookie、
+          数据库连接串或私钥片段后，先提示你选择是否脱敏。
+        </p>
+        <div class="actions">
+          <a class="button" href="privacy.html" data-i18n="home.privacyCta">查看隐私政策</a>
+          <a class="button secondary" href="support.html" data-i18n="home.supportCta">获取支持</a>
+        </div>
+      </section>
+
+      <section class="section-grid" aria-label="Product highlights">
+        <article>
+          <h2 data-i18n="home.localTitle">本地处理</h2>
+          <p data-i18n="home.localBody">检测与脱敏在浏览器本地完成。当前 Chrome 插件不上传粘贴内容，不保存敏感值，也不发网络请求。</p>
+        </article>
+        <article>
+          <h2 data-i18n="home.sitesTitle">只在指定 AI 网站运行</h2>
+          <p data-i18n="home.sitesBody">当前保护范围限定为 ChatGPT、Claude、Perplexity、豆包和 Qwen，避免请求过宽的网站权限。</p>
+        </article>
+        <article>
+          <h2 data-i18n="home.pasteTitle">只处理粘贴动作</h2>
+          <p data-i18n="home.pasteBody">插件只监听用户触发的 paste 事件，不扫描整个页面，不拦截发送、提交或点击动作。</p>
+        </article>
+      </section>
+
+      <section class="content-block">
+        <h2 data-i18n="home.risksTitle">当前可识别的常见风险</h2>
+        <ul class="check-list">
+          <li data-i18n="home.risk1">Authorization Bearer token 和 Basic Auth 凭证</li>
+          <li data-i18n="home.risk2">OpenAI、AWS、GitHub、Stripe 等常见访问密钥</li>
+          <li data-i18n="home.risk3">Cookie 会话值、URL 查询参数中的 token/key/secret/password</li>
+          <li data-i18n="home.risk4">数据库 URL、Redis URL、MongoDB URI、Sentry DSN 和 webhook URL</li>
+          <li data-i18n="home.risk5">PEM 私钥、npm token、pypirc 凭证、Docker registry auth</li>
+        </ul>
+      </section>
+
+      <section class="content-block muted">
+        <h2 data-i18n="home.boundaryTitle">当前边界</h2>
+        <p data-i18n="home.boundaryBody1">
+          VeilPaste 只能帮助发现明显的开发者密钥和凭证片段，不能保证一段 prompt
+          已经安全，也不能替代人工审查。处理真实生产数据前，请先确认你的团队安全要求。
+        </p>
+        <p data-i18n="home.boundaryBody2">
+          当前公开版本不是账号或订阅产品，不包含团队管理、云端同步、遥测、远程规则包或付费授权逻辑。
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>© 2026 VeilPaste</span>
+      <a href="privacy.html">Privacy</a>
+      <a href="support.html">Support</a>
+    </footer>
+  </body>
+</html>

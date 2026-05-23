@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VeilPaste 隐私政策</title>
+    <meta
+      data-i18n-meta="description"
+      name="description"
+      content="VeilPaste 隐私政策：当前 Chrome 插件本地处理粘贴内容，不上传内容，不保存敏感值，不发网络请求。"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script src="site-i18n.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="VeilPaste home">
+        <span class="brand-mark" aria-hidden="true">V</span>
+        <span>VeilPaste</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="privacy.html" aria-current="page" data-i18n="nav.privacy">隐私政策</a>
+        <a href="support.html" data-i18n="nav.support">支持</a>
+      </nav>
+    </header>
+
+    <main class="document">
+      <p class="eyebrow">Privacy Policy</p>
+      <h1 data-i18n="privacy.title">VeilPaste 隐私政策</h1>
+      <p class="lede small" data-i18n="privacy.updated">最后更新：2026 年 5 月 23 日</p>
+
+      <section>
+        <h2 data-i18n="privacy.overviewTitle">概述</h2>
+        <p data-i18n="privacy.overviewBody">
+          VeilPaste 是一个本地 AI 粘贴脱敏工具。当前 Chrome 插件会在指定 AI 网站上监听用户主动触发的粘贴动作，
+          本地识别明显的开发者密钥、访问令牌、会话值、连接串和私钥片段，并协助用户在粘贴前脱敏。
+        </p>
+      </section>
+
+      <section>
+        <h2 data-i18n="privacy.noCollectTitle">我们不收集的内容</h2>
+        <ul class="check-list">
+          <li data-i18n="privacy.noCollect1">不上传粘贴内容。</li>
+          <li data-i18n="privacy.noCollect2">不保存敏感值、密钥、token、Cookie、连接串或私钥。</li>
+          <li data-i18n="privacy.noCollect3">不保存完整 prompt。</li>
+          <li data-i18n="privacy.noCollect4">不收集遥测、分析事件或使用统计。</li>
+          <li data-i18n="privacy.noCollect5">当前 Chrome 插件不向 VeilPaste 服务器发起网络请求。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 data-i18n="privacy.localStorageTitle">本地保存的信息</h2>
+        <p data-i18n="privacy.localStorageBody">
+          VeilPaste 使用 Chrome 的本地扩展存储保存一个设置项：用户是否开启“以后自动脱敏”。
+          该设置仅保存在用户本机浏览器中，用于决定后续检测到敏感信息时是否直接本地脱敏。
+        </p>
+      </section>
+
+      <section>
+        <h2 data-i18n="privacy.sitesTitle">运行的网站范围</h2>
+        <p data-i18n="privacy.sitesBody">当前 Chrome 插件只在以下网站运行：</p>
+        <ul>
+          <li><code>https://chatgpt.com/*</code></li>
+          <li><code>https://claude.ai/*</code></li>
+          <li><code>https://www.perplexity.ai/*</code></li>
+          <li><code>https://www.doubao.com/*</code></li>
+          <li><code>https://chat.qwen.ai/*</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 data-i18n="privacy.permissionsTitle">权限用途</h2>
+        <p data-i18n="privacy.permissionsBody">
+          <code>storage</code> 权限仅用于保存本地设置。网站访问权限仅用于在上述 AI 网站上检测用户主动粘贴的文本。
+          VeilPaste 不使用这些权限读取浏览历史、扫描整页内容或拦截提交动作。
+        </p>
+      </section>
+
+      <section>
+        <h2 data-i18n="privacy.thirdPartyTitle">第三方服务</h2>
+        <p data-i18n="privacy.thirdPartyBody">
+          当前 Chrome 插件不集成第三方分析、广告、支付、账号登录或订阅服务。未来如果新增账号、订阅或云端能力，
+          本政策会在上线前更新，并明确说明新增的数据处理范围。
+        </p>
+      </section>
+
+      <section>
+        <h2 data-i18n="privacy.controlTitle">用户控制</h2>
+        <p data-i18n="privacy.controlBody">
+          用户可以在插件设置页关闭自动脱敏，也可以通过 Chrome 扩展管理页停用或卸载 VeilPaste。
+          卸载扩展会删除浏览器本地保存的扩展设置。
+        </p>
+      </section>
+
+      <section>
+        <h2 data-i18n="privacy.contactTitle">联系我们</h2>
+        <p>
+          <span data-i18n="privacy.contactBody">如果你对本隐私政策或 VeilPaste 的数据处理方式有问题，请联系：</span>
+          <a href="mailto:qudongshi@gmail.com">qudongshi@gmail.com</a><span data-i18n="punctuation.period">。</span>
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>© 2026 VeilPaste</span>
+      <a href="index.html">Home</a>
+      <a href="support.html">Support</a>
+    </footer>
+  </body>
+</html>

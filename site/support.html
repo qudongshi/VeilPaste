@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VeilPaste 支持</title>
+    <meta
+      data-i18n-meta="description"
+      name="description"
+      content="VeilPaste 支持页面：反馈误报、漏报、安装问题和 Chrome 插件使用问题。"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script src="site-i18n.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="VeilPaste home">
+        <span class="brand-mark" aria-hidden="true">V</span>
+        <span>VeilPaste</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="privacy.html" data-i18n="nav.privacy">隐私政策</a>
+        <a href="support.html" aria-current="page" data-i18n="nav.support">支持</a>
+      </nav>
+    </header>
+
+    <main class="document">
+      <p class="eyebrow">Support</p>
+      <h1 data-i18n="support.title">VeilPaste 支持</h1>
+      <p class="lede small" data-i18n="support.lede">
+        如果你遇到误报、漏报、安装问题或使用疑问，可以通过下面的方式反馈。
+      </p>
+
+      <section class="callout">
+        <h2 data-i18n="support.emailTitle">联系邮箱</h2>
+        <p>
+          <span data-i18n="support.emailBody">请发送邮件至</span>
+          <a href="mailto:qudongshi@gmail.com">qudongshi@gmail.com</a><span data-i18n="punctuation.period">。</span>
+        </p>
+      </section>
+
+      <section>
+        <h2 data-i18n="support.feedbackTitle">反馈误报或漏报</h2>
+        <p data-i18n="support.feedbackBody">为了保护你的安全，请不要发送真实密钥、真实 token、真实 Cookie 或生产连接串。建议提供：</p>
+        <ul class="check-list">
+          <li data-i18n="support.feedback1">使用 fake secret 改写后的样例文本。</li>
+          <li data-i18n="support.feedback2">你使用的网站，例如 ChatGPT、Claude、Perplexity、豆包或 Qwen。</li>
+          <li data-i18n="support.feedback3">浏览器版本和 VeilPaste 版本。</li>
+          <li data-i18n="support.feedback4">期望行为：应该提示、应该脱敏、还是不应该触发。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 data-i18n="support.sitesTitle">当前支持的网站</h2>
+        <ul>
+          <li>ChatGPT：<code>https://chatgpt.com/*</code></li>
+          <li>Claude：<code>https://claude.ai/*</code></li>
+          <li>Perplexity：<code>https://www.perplexity.ai/*</code></li>
+          <li>豆包：<code>https://www.doubao.com/*</code></li>
+          <li>Qwen：<code>https://chat.qwen.ai/*</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 data-i18n="support.faqTitle">常见问题</h2>
+        <h3 data-i18n="support.faqUploadQ">VeilPaste 会上传我的粘贴内容吗？</h3>
+        <p data-i18n="support.faqUploadA">不会。当前 Chrome 插件在本地处理粘贴文本，不上传内容，也不发网络请求。</p>
+
+        <h3 data-i18n="support.faqStoreQ">VeilPaste 会保存我的密钥吗？</h3>
+        <p data-i18n="support.faqStoreA">不会。当前版本只保存“以后自动脱敏”这个本地设置，不保存敏感值或完整 prompt。</p>
+
+        <h3 data-i18n="support.faqSitesQ">为什么只支持几个 AI 网站？</h3>
+        <p data-i18n="support.faqSitesA">这是为了减少网站权限范围。后续增加站点时，会继续按最小权限原则处理。</p>
+
+        <h3 data-i18n="support.faqSubscriptionQ">当前版本包含订阅或账号功能吗？</h3>
+        <p data-i18n="support.faqSubscriptionA">不包含。当前公开版本不是账号或订阅产品，也没有云端同步或远程规则包。</p>
+      </section>
+
+      <section>
+        <h2 data-i18n="support.uninstallTitle">卸载方式</h2>
+        <p data-i18n="support.uninstallBody">
+          打开 Chrome 的扩展管理页，找到 VeilPaste，选择停用或移除即可。卸载扩展会删除浏览器本地保存的扩展设置。
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>© 2026 VeilPaste</span>
+      <a href="index.html">Home</a>
+      <a href="privacy.html">Privacy</a>
+    </footer>
+  </body>
+</html>
